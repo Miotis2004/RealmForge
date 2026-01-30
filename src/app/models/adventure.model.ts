@@ -53,3 +53,11 @@ export interface Monster {
   stats: MonsterStats;
   behavior: MonsterAction[];
 }
+
+export interface PendingRoll {
+  reason: string; // e.g. "Dexterity Check"
+  modifier: number;
+  dc?: number;
+  sourceOption?: AdventureOption;
+  onComplete?: (roll: number) => void;
+}

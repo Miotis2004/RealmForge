@@ -1,6 +1,7 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { GameState, LogEntry } from '../models/game-state.model';
+import { GameState, LogEntry, CombatState } from '../models/game-state.model';
 import { Character } from '../models/character.model';
+import { PendingRoll } from '../models/adventure.model';
 
 @Injectable({
   providedIn: 'root'
@@ -12,6 +13,8 @@ export class GameStateService {
   readonly currentNodeId = signal<string>('scene_01_start');
   readonly gameLog = signal<LogEntry[]>([]);
   readonly tags = signal<string[]>([]);
+  readonly combatState = signal<CombatState | null>(null);
+  readonly pendingRoll = signal<PendingRoll | null>(null);
 
   // Computed state
   readonly isDead = computed(() => this.character().hp <= 0);
@@ -59,6 +62,7 @@ export class GameStateService {
     this.currentNodeId.set(state.currentNodeId);
     this.gameLog.set(state.gameLog);
     this.tags.set(state.tags);
+    this.combatState.set(state.combat || null);
   }
 
   getState(): GameState {
@@ -66,7 +70,8 @@ export class GameStateService {
       character: this.character(),
       currentNodeId: this.currentNodeId(),
       gameLog: this.gameLog(),
-      tags: this.tags()
+      tags: this.tags(),
+      combat: this.combatState() || undefined
     };
   }
 
