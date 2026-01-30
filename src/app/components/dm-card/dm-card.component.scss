@@ -1,0 +1,19 @@
+.dm-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.narrative-text {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  margin-top: 1rem;
+}
+
+.actions-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px;
+}

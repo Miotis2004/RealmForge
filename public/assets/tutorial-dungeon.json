@@ -1,0 +1,127 @@
+[
+  {
+    "nodeId": "scene_01_start",
+    "type": "narrative",
+    "text": "You stand before the ancient gate of the Lost Keep. The wind howls around you.",
+    "options": [
+      {
+        "label": "Examine the Gate",
+        "actionType": "navigation",
+        "targetNodeId": "scene_02_gate_examine"
+      },
+      {
+        "label": "Turn Back",
+        "actionType": "navigation",
+        "targetNodeId": "scene_99_game_over"
+      }
+    ]
+  },
+  {
+    "nodeId": "scene_02_gate_examine",
+    "type": "interaction",
+    "text": "The gate is sealed with a rusted iron lock. It looks fragile.",
+    "options": [
+      {
+        "label": "Pick the Lock (DEX)",
+        "actionType": "skill_check",
+        "skill": "dexterity",
+        "dc": 12,
+        "successNode": "scene_03_courtyard",
+        "failNode": "scene_02_gate_jammed"
+      },
+      {
+        "label": "Kick it down (STR)",
+        "actionType": "skill_check",
+        "skill": "strength",
+        "dc": 14,
+        "successNode": "scene_03_courtyard", 
+        "failNode": "scene_02_hurt_foot"
+      }
+    ]
+  },
+  {
+    "nodeId": "scene_02_gate_jammed",
+    "type": "narrative",
+    "text": "You fumble with the lock and the pick snaps inside! It is now hopelessly jammed.",
+    "options": [
+      {
+        "label": "Kick it down (STR)",
+        "actionType": "skill_check",
+        "skill": "strength",
+        "dc": 14,
+        "successNode": "scene_03_courtyard", 
+        "failNode": "scene_02_hurt_foot"
+      }
+    ]
+  },
+  {
+    "nodeId": "scene_02_hurt_foot",
+    "type": "narrative",
+    "text": "You kick the iron bars, but they do not budge. You hurt your foot.",
+    "options": [
+      {
+        "label": "Try again",
+        "actionType": "skill_check",
+        "skill": "strength",
+        "dc": 14,
+        "successNode": "scene_03_courtyard", 
+        "failNode": "scene_99_game_over"
+      }
+    ]
+  },
+  {
+    "nodeId": "scene_03_courtyard",
+    "type": "logic",
+    "condition": "strength > 15",
+    "trueNode": "scene_03_courtyard_strong",
+    "falseNode": "scene_03_courtyard_normal"
+  },
+  {
+    "nodeId": "scene_03_courtyard_strong",
+    "type": "narrative",
+    "text": "You enter the courtyard. Your immense strength makes you feel confident.",
+    "options": [
+      {
+        "label": "Explore",
+        "actionType": "navigation",
+        "targetNodeId": "scene_04_end"
+      }
+    ]
+  },
+  {
+    "nodeId": "scene_03_courtyard_normal",
+    "type": "narrative",
+    "text": "You enter the courtyard. It is dark and ominous.",
+    "options": [
+      {
+        "label": "Explore",
+        "actionType": "navigation",
+        "targetNodeId": "scene_04_end"
+      }
+    ]
+  },
+  {
+    "nodeId": "scene_04_end",
+    "type": "narrative",
+    "text": "You have reached the end of the demo.",
+    "options": [
+      {
+        "label": "Restart",
+        "actionType": "navigation",
+        "targetNodeId": "scene_01_start"
+      }
+    ]
+  },
+  {
+    "nodeId": "scene_99_game_over",
+    "type": "narrative",
+    "text": "You failed. Game Over.",
+    "options": [
+      {
+        "label": "Restart",
+        "actionType": "navigation",
+        "targetNodeId": "scene_01_start"
+      }
+    ]
+  }
+]

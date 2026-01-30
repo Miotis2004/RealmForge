@@ -1,0 +1,16 @@
+<mat-card class="log-card">
+  <mat-card-header>
+    <mat-card-title>Game Log</mat-card-title>
+  </mat-card-header>
+  <mat-card-content class="log-content">
+    <mat-list>
+      @for (entry of logs; track entry.timestamp) {
+        <mat-list-item>
+          <span matListItemTitle class="log-message" [ngClass]="entry.type">{{ entry.message }}</span>
+          <span matListItemLine class="log-time">{{ entry.timestamp | date:'mediumTime' }}</span>
+        </mat-list-item>
+        <mat-divider></mat-divider>
+      }
+    </mat-list>
+  </mat-card-content>
+</mat-card>

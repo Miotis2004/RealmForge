@@ -1,0 +1,41 @@
+.spacer {
+  flex: 1 1 auto;
+}
+
+.game-container {
+  display: flex;
+  height: calc(100vh - 64px); /* Toolbar height */
+  padding: 16px;
+  gap: 16px;
+  background-color: #333;
+}
+
+.main-column {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.dm-area {
+  flex: 1;
+}
+
+.side-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.char-area {
+  flex: 0 0 auto;
+}
+
+.dice-area {
+  flex: 0 0 100px;
+}
+
+.log-area {
+  flex: 1;
+  min-height: 0; /* Allow scroll within flex item */
+}

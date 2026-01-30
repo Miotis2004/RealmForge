@@ -1,0 +1,21 @@
+<mat-toolbar color="primary">
+  <span>Realm Forge</span>
+  <span class="spacer"></span>
+  <button mat-icon-button (click)="saveGame()" title="Save Game">
+    <mat-icon>save</mat-icon>
+  </button>
+  <button mat-icon-button (click)="newGame()" title="New Game">
+    <mat-icon>refresh</mat-icon>
+  </button>
+</mat-toolbar>
+
+<div class="game-container">
+  <div class="main-column">
+    <app-dm-card class="dm-area"></app-dm-card>
+  </div>
+  <div class="side-column">
+    <app-character-card class="char-area"></app-character-card>
+    <app-dice-card class="dice-area"></app-dice-card>
+    <app-log-card class="log-area"></app-log-card>
+  </div>
+</div>

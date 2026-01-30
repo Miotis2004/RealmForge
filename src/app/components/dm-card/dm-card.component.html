@@ -1,0 +1,23 @@
+<mat-card class="dm-card">
+  <mat-card-header>
+    <mat-card-title>Dungeon Master</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    @if (adventure.isLoading()) {
+      <p>Loading adventure...</p>
+    } @else {
+      @if (adventure.currentDisplayNode(); as node) {
+        <p class="narrative-text">{{ node.text }}</p>
+      } @else {
+        <p>No active scene.</p>
+      }
+    }
+  </mat-card-content>
+  <mat-card-actions align="end" class="actions-container">
+    @for (opt of options(); track opt.label) {
+      <button mat-flat-button color="primary" (click)="adventure.handleOption(opt)">
+        {{ opt.label }}
+      </button>
+    }
+  </mat-card-actions>
+</mat-card>

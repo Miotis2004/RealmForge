@@ -1,0 +1,30 @@
+.log-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.log-content {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 400px; /* Adjust as needed */
+}
+
+.log-message {
+    &.roll {
+        color: blue;
+        font-weight: bold;
+    }
+    &.combat {
+        color: red;
+    }
+    &.info {
+        color: gray;
+        font-style: italic;
+    }
+}
+
+.log-time {
+    font-size: 0.8em;
+    color: #999;
+}

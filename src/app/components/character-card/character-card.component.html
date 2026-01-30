@@ -1,0 +1,25 @@
+<mat-card class="character-card">
+  <mat-card-header>
+    <mat-card-title>{{ character.name }}</mat-card-title>
+    <mat-card-subtitle>Level {{ character.level }} {{ character.race }} {{ character.class }}</mat-card-subtitle>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="hp-container">
+      <div class="hp-label">HP: {{ character.hp }} / {{ character.maxHp }}</div>
+      <mat-progress-bar mode="determinate" [value]="hpPercentage()"></mat-progress-bar>
+    </div>
+    
+    <div class="stats-grid">
+      @for (stat of character.stats | keyvalue; track stat.key) {
+        <div class="stat-box">
+          <div class="stat-label">{{ stat.key | titlecase | slice:0:3 }}</div>
+          <div class="stat-value">{{ stat.value }}</div>
+          <div class="stat-mod">
+             @let mod = (stat.value - 10) / 2;
+             {{ mod >= 0 ? '+' + (mod | number:'1.0-0') : (mod | number:'1.0-0') }}
+          </div>
+        </div>
+      }
+    </div>
+  </mat-card-content>
+</mat-card>
