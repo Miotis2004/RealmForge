@@ -21,6 +21,7 @@ export class AdventureEngineService {
 
   private nodes = new Map<string, AdventureNode>();
   private monsters = new Map<string, Monster>();
+  private startNodeId: string | null = null;
   
   // Signals exposed to UI
   readonly currentDisplayNode = signal<AdventureNode | null>(null);
@@ -36,8 +37,10 @@ export class AdventureEngineService {
 
       if (Array.isArray(data)) {
          data.forEach(node => this.nodes.set(node.nodeId, node));
+         this.startNodeId = data[0]?.nodeId ?? null;
       } else {
          data.nodes.forEach(node => this.nodes.set(node.nodeId, node));
+         this.startNodeId = data.nodes[0]?.nodeId ?? null;
          if (data.monsters) {
             data.monsters.forEach(m => this.monsters.set(m.id, m));
          }
@@ -64,6 +67,7 @@ export class AdventureEngineService {
     if (!node) {
       // If node missing, maybe it's because we haven't loaded yet or bad ID
       console.warn(`Node ${nodeId} not found!`);
+      this.resetToStartNode();
       return;
     }
 
@@ -84,6 +88,20 @@ export class AdventureEngineService {
     }
 
     this.currentDisplayNode.set(node);
+  }
+
+  private resetToStartNode() {
+    if (!this.startNodeId) {
+      return;
+    }
+
+    const startNode = this.nodes.get(this.startNodeId);
+    if (!startNode) {
+      return;
+    }
+
+    this.gameState.setNode(this.startNodeId);
+    this.currentDisplayNode.set(startNode);
   }
 
   private processCombatNode(node: AdventureNode) {
