@@ -1,16 +1,47 @@
 .dice-card {
     height: 100%;
     display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: #f0f0f0;
+    flex-direction: column;
 }
 
 .dice-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
     text-align: center;
+    gap: 16px;
 }
 
 .d20-icon {
     font-size: 3rem;
     display: block;
+}
+
+.faded {
+    opacity: 0.3;
+}
+
+.spinning {
+    animation: spin 0.5s infinite linear;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.pending-roll-info {
+    font-weight: bold;
+    .modifier {
+        font-size: 0.9rem;
+        color: #666;
+    }
+}
+
+.dice-result .d20-icon {
+    font-size: 4rem;
+    font-weight: bold;
+    color: #3f51b5;
 }

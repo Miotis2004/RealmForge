@@ -1,9 +1,15 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import { AdventureNode, AdventureOption } from '../models/adventure.model';
+import { AdventureNode, AdventureOption, PendingRoll, Monster } from '../models/adventure.model';
 import { GameStateService } from './game-state.service';
+import { CombatEngineService } from './combat-engine.service';
 import { CharacterStats } from '../models/character.model';
+
+interface AdventureData {
+  nodes: AdventureNode[];
+  monsters: Monster[];
+}
 
 @Injectable({
   providedIn: 'root'
@@ -11,26 +17,43 @@ import { CharacterStats } from '../models/character.model';
 export class AdventureEngineService {
   private http = inject(HttpClient);
   private gameState = inject(GameStateService);
+  private combatEngine = inject(CombatEngineService);
 
   private nodes = new Map<string, AdventureNode>();
+  private monsters = new Map<string, Monster>();
   
   // Signals exposed to UI
   readonly currentDisplayNode = signal<AdventureNode | null>(null);
   readonly isLoading = signal<boolean>(true);
+  // readonly pendingRoll is now in GameStateService
 
   async loadAdventure(url: string) {
     this.isLoading.set(true);
     try {
-      const nodes = await firstValueFrom(this.http.get<AdventureNode[]>(url));
-      nodes.forEach(node => this.nodes.set(node.nodeId, node));
+      // Try loading as new format { nodes: [], monsters: [] }
+      // Or fallback to array if legacy (though we are building fresh)
+      const data = await firstValueFrom(this.http.get<AdventureData | AdventureNode[]>(url));
+
+      if (Array.isArray(data)) {
+         data.forEach(node => this.nodes.set(node.nodeId, node));
+      } else {
+         data.nodes.forEach(node => this.nodes.set(node.nodeId, node));
+         if (data.monsters) {
+            data.monsters.forEach(m => this.monsters.set(m.id, m));
+         }
+      }
+
       this.updateCurrentNode();
     } catch (err) {
       console.error('Failed to load adventure', err);
-      // Fallback for verification if file is missing (development only)
       this.gameState.addLog({ type: 'info', message: 'Failed to load adventure file.', timestamp: Date.now() });
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  getMonster(id: string): Monster | undefined {
+    return this.monsters.get(id);
   }
 
   // Called whenever we want to refresh what the user sees based on state
@@ -50,7 +73,35 @@ export class AdventureEngineService {
       return;
     }
 
+    // Handle combat nodes
+    if (node.type === 'combat') {
+        this.processCombatNode(node);
+        // Do NOT set currentDisplayNode yet, or set it but Combat UI takes precedence
+        // Actually, if we are in combat, the DM card should show combat.
+        // We set currentDisplayNode to allow "Description" if needed, but CombatState in GameStateService usually drives UI
+        this.currentDisplayNode.set(node);
+        return;
+    }
+
     this.currentDisplayNode.set(node);
+  }
+
+  private processCombatNode(node: AdventureNode) {
+    if (!node.monsterIds || !node.victoryNode || !node.defeatNode) {
+        console.error('Invalid combat node', node);
+        return;
+    }
+
+    const monsters: Monster[] = [];
+    for (const id of node.monsterIds) {
+        const m = this.monsters.get(id);
+        if (m) monsters.push(m);
+    }
+
+    this.combatEngine.startCombat(monsters, node.victoryNode, node.defeatNode, () => {
+        // Callback when combat ends
+        this.updateCurrentNode();
+    });
   }
 
   private processLogicNode(node: AdventureNode) {
@@ -124,8 +175,6 @@ export class AdventureEngineService {
   }
 
   private handleSkillCheck(option: AdventureOption) {
-    // Basic roll simulation
-    const roll = Math.floor(Math.random() * 20) + 1;
     const char = this.gameState.character();
     
     let modifier = 0;
@@ -137,26 +186,55 @@ export class AdventureEngineService {
         }
     }
     
-    const total = roll + modifier; 
-    
     this.gameState.addLog({
-      type: 'roll',
-      message: `Skill Check (${option.skill}): Rolled ${roll} + ${modifier} = ${total} (DC ${option.dc})`,
+      type: 'info',
+      message: `Make a ${option.skill} check (DC ${option.dc}).`,
       timestamp: Date.now()
     });
 
-    if (option.dc && total >= option.dc) {
-      this.gameState.addLog({ type: 'info', message: 'Success!', timestamp: Date.now() });
-      if (option.successNode) {
-        this.gameState.setNode(option.successNode);
-        this.updateCurrentNode();
-      }
-    } else {
-      this.gameState.addLog({ type: 'info', message: 'Failure!', timestamp: Date.now() });
-      if (option.failNode) {
-        this.gameState.setNode(option.failNode);
-        this.updateCurrentNode();
-      }
+    this.gameState.pendingRoll.set({
+      reason: `${option.skill} Check`,
+      modifier,
+      dc: option.dc,
+      sourceOption: option
+    });
+  }
+
+  resolvePendingRoll(roll: number) {
+    const pending = this.gameState.pendingRoll();
+    if (!pending) return;
+
+    const total = roll + pending.modifier;
+    const option = pending.sourceOption;
+
+    this.gameState.addLog({
+      type: 'roll',
+      message: `Rolled ${roll} + ${pending.modifier} = ${total} (DC ${pending.dc})`,
+      timestamp: Date.now()
+    });
+
+    if (pending.onComplete) {
+        pending.onComplete(roll);
+        this.gameState.pendingRoll.set(null);
+        return;
     }
+
+    if (option) {
+        if (pending.dc && total >= pending.dc) {
+        this.gameState.addLog({ type: 'info', message: 'Success!', timestamp: Date.now() });
+        if (option.successNode) {
+            this.gameState.setNode(option.successNode);
+            this.updateCurrentNode();
+        }
+        } else {
+        this.gameState.addLog({ type: 'info', message: 'Failure!', timestamp: Date.now() });
+        if (option.failNode) {
+            this.gameState.setNode(option.failNode);
+            this.updateCurrentNode();
+        }
+        }
+    }
+
+    this.gameState.pendingRoll.set(null);
   }
 }
