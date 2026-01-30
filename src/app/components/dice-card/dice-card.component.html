@@ -1,8 +1,38 @@
 <mat-card class="dice-card">
+    <mat-card-header>
+      <mat-card-title>Dice Tray</mat-card-title>
+    </mat-card-header>
     <mat-card-content>
         <div class="dice-container">
-            <span class="d20-icon">🎲</span>
-            <p>Dice Tray</p>
+
+            @if (gameState.pendingRoll(); as pending) {
+                <div class="pending-roll-info">
+                   <p>{{ pending.reason }}</p>
+                   <p class="modifier">Modifier: {{ pending.modifier >= 0 ? '+' : '' }}{{ pending.modifier }}</p>
+                </div>
+
+                @if (rolling()) {
+                    <div class="dice-animation">
+                         <span class="d20-icon spinning">🎲</span>
+                         <p>Rolling...</p>
+                    </div>
+                } @else if (lastRoll()) {
+                    <div class="dice-result">
+                        <span class="d20-icon">{{ lastRoll() }}</span>
+                    </div>
+                } @else {
+                     <button mat-fab extended color="accent" (click)="rollDice()">
+                        <span class="d20-icon">🎲</span> Roll D20
+                     </button>
+                }
+
+            } @else {
+                <div class="empty-tray">
+                    <span class="d20-icon faded">🎲</span>
+                    <p>Waiting for request...</p>
+                </div>
+            }
+
         </div>
     </mat-card-content>
 </mat-card>

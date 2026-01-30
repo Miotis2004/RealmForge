@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, effect } from '@angular/core';
 import { DmCardComponent } from './components/dm-card/dm-card.component';
 import { CharacterCardComponent } from './components/character-card/character-card.component';
 import { LogCardComponent } from './components/log-card/log-card.component';
@@ -29,13 +29,22 @@ export class AppComponent implements OnInit {
   adventure = inject(AdventureEngineService);
   persistence = inject(PersistenceService);
 
+  constructor() {
+    effect(() => {
+        const user = this.persistence.user();
+        if (user) {
+            this.persistence.loadGame().then(loaded => {
+                if (loaded) {
+                    // Update display after loading state
+                    this.adventure.updateCurrentNode();
+                }
+            });
+        }
+    });
+  }
+
   ngOnInit() {
-    // Attempt to load save, else load fresh adventure
-    if (this.persistence.hasSave()) {
-        this.persistence.loadGame();
-    }
-    
-    // Always load adventure data structure (state stores node ID, but engine needs the graph)
+    // Always load adventure data structure
     this.adventure.loadAdventure('assets/tutorial-dungeon.json'); 
   }
 
@@ -44,7 +53,8 @@ export class AppComponent implements OnInit {
   }
   
   newGame() {
-    this.persistence.clearSave();
-    window.location.reload(); // Simple way to reset state for now
+    this.persistence.clearSave().then(() => {
+        window.location.reload();
+    });
   }
 }
