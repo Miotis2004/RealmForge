@@ -2,12 +2,6 @@
   @if (gameState.combatState(); as combat) {
     <mat-card-header>
         <mat-card-title>Combat (Round {{ combat.round }})</mat-card-title>
-        <span class="spacer"></span>
-        @if (combat.turnOrder[combat.currentTurnIndex].isPlayer) {
-             <span class="turn-badge player-turn">YOUR TURN</span>
-        } @else {
-             <span class="turn-badge enemy-turn">ENEMY TURN</span>
-        }
     </mat-card-header>
     <mat-card-content>
        <p class="narrative-text">
@@ -24,11 +18,7 @@
                         [class.dead]="c.hp <= 0">
                        <span class="name">{{ c.name }}</span>
                        <span class="hp">HP: {{ c.hp }} / {{ c.maxHp }}</span>
-                       @if (i === combat.currentTurnIndex) {
-                           <span class="indicator">
-                               <mat-icon>arrow_back</mat-icon>
-                           </span>
-                       }
+                       @if (i === combat.currentTurnIndex) { <span class="indicator">⬅ Current Turn</span> }
                    </div>
                }
            </div>
@@ -40,9 +30,7 @@
                 ⚔ Attack
             </button>
         } @else {
-             <div class="enemy-thinking">
-                 <mat-icon class="spinning">settings</mat-icon> Thinking...
-             </div>
+             <button mat-button disabled>Enemy Thinking...</button>
         }
     </mat-card-actions>
   } @else {
@@ -51,10 +39,7 @@
     </mat-card-header>
     <mat-card-content>
       @if (adventure.isLoading()) {
-        <div class="loading-state">
-             <mat-icon class="spinning">hourglass_empty</mat-icon>
-             <p>Loading adventure...</p>
-        </div>
+        <p>Loading adventure...</p>
       } @else {
         @if (adventure.currentDisplayNode(); as node) {
           <p class="narrative-text">{{ node.text }}</p>

@@ -30,30 +30,12 @@ export class AdventureEngineService {
   async loadAdventure(url: string) {
     this.isLoading.set(true);
     try {
-      // Load Bestiary first (typically this would be configured globally or per adventure)
-      // For now, we load a standard bestiary
-      try {
-          const monsters = await firstValueFrom(this.http.get<Monster[]>('assets/bestiary.json'));
-          monsters.forEach(m => this.monsters.set(m.id, m));
-      } catch (e) {
-          console.warn('No bestiary found or failed to load.');
-      }
-
-      // Load Adventure
+      // Try loading as new format { nodes: [], monsters: [] }
+      // Or fallback to array if legacy (though we are building fresh)
       const data = await firstValueFrom(this.http.get<AdventureData | AdventureNode[]>(url));
 
       if (Array.isArray(data)) {
-         // Legacy Array format (just nodes) - rare now but handled
-         // Check if it has a 'nodes' property wrapper if user made mistake? No, array is array.
-         // Wait, the tutorial-dungeon.json I just wrote has { nodes: [...] }. That is NOT an array.
-         // It is an object with 'nodes'.
-         // Typescript check:
-         if ((data as any).nodes) {
-             (data as any).nodes.forEach((node: AdventureNode) => this.nodes.set(node.nodeId, node));
-         } else {
-             // Pure array of nodes
-             data.forEach(node => this.nodes.set(node.nodeId, node));
-         }
+         data.forEach(node => this.nodes.set(node.nodeId, node));
       } else {
          data.nodes.forEach(node => this.nodes.set(node.nodeId, node));
          if (data.monsters) {

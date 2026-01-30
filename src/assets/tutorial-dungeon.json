@@ -132,5 +132,19 @@
           }
       ]
     }
+  ],
+  "monsters": [
+    {
+      "id": "goblin_guard",
+      "name": "Goblin Guard",
+      "stats": { "hp": 7, "ac": 12, "speed": 30 },
+      "behavior": [
+        {
+            "priority": 1,
+            "condition": "always",
+            "action": "scimitar_attack"
+        }
+      ]
+    }
   ]
 }
