@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { AdventureEngineService } from '../../services/adventure-engine.service';
 import { GameStateService } from '../../services/game-state.service';
 import { CombatEngineService } from '../../services/combat-engine.service';
@@ -9,7 +10,7 @@ import { CombatEngineService } from '../../services/combat-engine.service';
 @Component({
   selector: 'app-dm-card',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatButtonModule],
+  imports: [CommonModule, MatCardModule, MatButtonModule, MatIconModule],
   templateUrl: './dm-card.component.html',
   styleUrl: './dm-card.component.scss'
 })
