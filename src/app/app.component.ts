@@ -35,6 +35,18 @@ export class AppComponent implements OnInit {
   adventure = inject(AdventureEngineService);
   persistence = inject(PersistenceService);
 
+  // Define columns as a public property for the template
+  columns: {id: string, items: string[]}[] = [
+      {
+          id: 'col-1',
+          items: ['dm']
+      },
+      {
+          id: 'col-2',
+          items: ['character', 'dice', 'oracle', 'log']
+      }
+  ];
+
   constructor() {
     effect(() => {
         const user = this.persistence.user();
@@ -62,5 +74,18 @@ export class AppComponent implements OnInit {
     this.persistence.clearSave().then(() => {
         window.location.reload();
     });
+  }
+
+  drop(event: CdkDragDrop<string[]>) {
+    if (event.previousContainer === event.container) {
+      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    } else {
+      transferArrayItem(
+        event.previousContainer.data,
+        event.container.data,
+        event.previousIndex,
+        event.currentIndex,
+      );
+    }
   }
 }

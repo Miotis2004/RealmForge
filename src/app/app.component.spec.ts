@@ -5,6 +5,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { PersistenceService } from './services/persistence.service';
 import { AdventureEngineService } from './services/adventure-engine.service';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 describe('AppComponent', () => {
   beforeEach(async () => {
