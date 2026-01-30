@@ -1,17 +1,39 @@
 import { TestBed } from '@angular/core/testing';
 import { AppComponent } from './app.component';
-import { provideExperimentalZonelessChangeDetection } from '@angular/core';
+import { provideExperimentalZonelessChangeDetection, signal } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
+import { PersistenceService } from './services/persistence.service';
+import { AdventureEngineService } from './services/adventure-engine.service';
+import { DragDropModule } from '@angular/cdk/drag-drop';
 
 describe('AppComponent', () => {
   beforeEach(async () => {
+    const persistenceMock = {
+        user: signal(null),
+        loadGame: jasmine.createSpy('loadGame').and.returnValue(Promise.resolve(false)),
+        saveGame: jasmine.createSpy('saveGame'),
+        clearSave: jasmine.createSpy('clearSave').and.returnValue(Promise.resolve()),
+        hasSave: jasmine.createSpy('hasSave').and.returnValue(false)
+    };
+
+    const adventureMock = {
+        loadAdventure: jasmine.createSpy('loadAdventure'),
+        updateCurrentNode: jasmine.createSpy('updateCurrentNode'),
+        currentDisplayNode: signal(null),
+        isLoading: signal(false),
+        pendingRoll: signal(null),
+        getAvailableOptions: () => [],
+    };
+
     await TestBed.configureTestingModule({
       imports: [AppComponent],
       providers: [
           provideExperimentalZonelessChangeDetection(),
           provideHttpClient(),
-          provideAnimationsAsync()
+          provideAnimationsAsync(),
+          { provide: PersistenceService, useValue: persistenceMock },
+          { provide: AdventureEngineService, useValue: adventureMock }
       ]
     }).compileComponents();
   });

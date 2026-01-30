@@ -1,0 +1,23 @@
+<mat-card class="oracle-card">
+  <mat-card-header>
+    <mat-card-title>Oracle</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="oracle-container">
+        @if (lastAnswer) {
+            <div class="answer-display">
+                {{ lastAnswer }}
+            </div>
+        } @else {
+            <div class="placeholder">
+                Ask a yes/no question...
+            </div>
+        }
+    </div>
+  </mat-card-content>
+  <mat-card-actions class="actions">
+      <button mat-stroked-button (click)="ask('likely')">Likely</button>
+      <button mat-stroked-button (click)="ask('50/50')">50/50</button>
+      <button mat-stroked-button (click)="ask('unlikely')">Unlikely</button>
+  </mat-card-actions>
+</mat-card>

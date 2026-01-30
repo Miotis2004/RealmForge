@@ -1,0 +1,136 @@
+{
+  "nodes": [
+    {
+      "nodeId": "scene_01_start",
+      "type": "narrative",
+      "text": "You stand before the entrance of the Forgotten Crypt. The air is cold and stale. A stone door stands slightly ajar.",
+      "options": [
+        {
+          "label": "Enter the Crypt",
+          "actionType": "navigation",
+          "targetNodeId": "scene_02_hallway"
+        },
+        {
+          "label": "Examine the door",
+          "actionType": "skill_check",
+          "skill": "investigation",
+          "dc": 12,
+          "successNode": "scene_01_examine_success",
+          "failNode": "scene_01_examine_fail"
+        }
+      ]
+    },
+    {
+      "nodeId": "scene_01_examine_success",
+      "type": "narrative",
+      "text": "You notice recent scratches on the stone floor. Something was dragged in here recently.",
+      "options": [
+        {
+          "label": "Enter cautiously",
+          "actionType": "navigation",
+          "targetNodeId": "scene_02_hallway"
+        }
+      ]
+    },
+    {
+      "nodeId": "scene_01_examine_fail",
+      "type": "narrative",
+      "text": "It's just an old door.",
+      "options": [
+        {
+          "label": "Enter",
+          "actionType": "navigation",
+          "targetNodeId": "scene_02_hallway"
+        }
+      ]
+    },
+    {
+      "nodeId": "scene_02_hallway",
+      "type": "interaction",
+      "text": "The hallway stretches forward into darkness. You hear a faint chittering sound ahead.",
+      "options": [
+        {
+          "label": "Sneak forward",
+          "actionType": "skill_check",
+          "skill": "stealth",
+          "dc": 10,
+          "successNode": "scene_03_ambush_advantage",
+          "failNode": "scene_03_ambush_normal"
+        },
+        {
+          "label": "Charge in!",
+          "actionType": "navigation",
+          "targetNodeId": "scene_03_ambush_normal"
+        }
+      ]
+    },
+    {
+      "nodeId": "scene_03_ambush_advantage",
+      "type": "narrative",
+      "text": "You creep silently and spot a Goblin Guard with his back turned! You have the element of surprise.",
+      "options": [
+        {
+          "label": "Attack!",
+          "actionType": "navigation",
+          "targetNodeId": "combat_goblin"
+        }
+      ]
+    },
+    {
+      "nodeId": "scene_03_ambush_normal",
+      "type": "narrative",
+      "text": "You stumble into the room. A Goblin Guard spots you and draws his scimitar!",
+      "options": [
+        {
+          "label": "Fight!",
+          "actionType": "navigation",
+          "targetNodeId": "combat_goblin"
+        }
+      ]
+    },
+    {
+      "nodeId": "combat_goblin",
+      "type": "combat",
+      "text": "Combat Started!",
+      "monsterIds": ["goblin_guard"],
+      "victoryNode": "scene_04_victory",
+      "defeatNode": "scene_game_over"
+    },
+    {
+      "nodeId": "scene_04_victory",
+      "type": "narrative",
+      "text": "The goblin falls. You catch your breath. In the corner, you see a small chest.",
+      "options": [
+        {
+            "label": "Open Chest",
+            "actionType": "navigation",
+            "targetNodeId": "scene_05_loot"
+        }
+      ]
+    },
+    {
+      "nodeId": "scene_05_loot",
+      "type": "narrative",
+      "text": "You find 50 gold pieces and a strange glowing gem. The tutorial is complete.",
+      "options": [
+          {
+              "label": "Restart",
+              "actionType": "navigation",
+              "targetNodeId": "scene_01_start"
+          }
+      ]
+    },
+    {
+      "nodeId": "scene_game_over",
+      "type": "narrative",
+      "text": "Your vision fades to black. You have fallen.",
+      "options": [
+          {
+              "label": "Try Again",
+              "actionType": "navigation",
+              "targetNodeId": "scene_01_start"
+          }
+      ]
+    }
+  ]
+}

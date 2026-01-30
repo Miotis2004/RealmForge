@@ -1,23 +1,74 @@
 <mat-card class="dm-card">
-  <mat-card-header>
-    <mat-card-title>Dungeon Master</mat-card-title>
-  </mat-card-header>
-  <mat-card-content>
-    @if (adventure.isLoading()) {
-      <p>Loading adventure...</p>
-    } @else {
-      @if (adventure.currentDisplayNode(); as node) {
-        <p class="narrative-text">{{ node.text }}</p>
+  @if (gameState.combatState(); as combat) {
+    <mat-card-header>
+        <mat-card-title>Combat (Round {{ combat.round }})</mat-card-title>
+        <span class="spacer"></span>
+        @if (combat.turnOrder[combat.currentTurnIndex].isPlayer) {
+             <span class="turn-badge player-turn">YOUR TURN</span>
+        } @else {
+             <span class="turn-badge enemy-turn">ENEMY TURN</span>
+        }
+    </mat-card-header>
+    <mat-card-content>
+       <p class="narrative-text">
+          {{ adventure.currentDisplayNode()?.text }}
+       </p>
+
+       <div class="turn-order-container">
+           <h3>Turn Order</h3>
+           <div class="turn-list">
+               @for (c of combat.turnOrder; track c.instanceId; let i = $index) {
+                   <div class="combatant-row"
+                        [class.active]="i === combat.currentTurnIndex"
+                        [class.enemy]="!c.isPlayer"
+                        [class.dead]="c.hp <= 0">
+                       <span class="name">{{ c.name }}</span>
+                       <span class="hp">HP: {{ c.hp }} / {{ c.maxHp }}</span>
+                       @if (i === combat.currentTurnIndex) {
+                           <span class="indicator">
+                               <mat-icon>arrow_back</mat-icon>
+                           </span>
+                       }
+                   </div>
+               }
+           </div>
+       </div>
+    </mat-card-content>
+    <mat-card-actions align="end">
+        @if (combat.turnOrder[combat.currentTurnIndex].isPlayer) {
+            <button mat-flat-button color="warn" (click)="combatEngine.playerAction('attack')">
+                ⚔ Attack
+            </button>
+        } @else {
+             <div class="enemy-thinking">
+                 <mat-icon class="spinning">settings</mat-icon> Thinking...
+             </div>
+        }
+    </mat-card-actions>
+  } @else {
+    <mat-card-header>
+      <mat-card-title>Dungeon Master</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (adventure.isLoading()) {
+        <div class="loading-state">
+             <mat-icon class="spinning">hourglass_empty</mat-icon>
+             <p>Loading adventure...</p>
+        </div>
       } @else {
-        <p>No active scene.</p>
+        @if (adventure.currentDisplayNode(); as node) {
+          <p class="narrative-text">{{ node.text }}</p>
+        } @else {
+          <p>No active scene.</p>
+        }
       }
-    }
-  </mat-card-content>
-  <mat-card-actions align="end" class="actions-container">
-    @for (opt of options(); track opt.label) {
-      <button mat-flat-button color="primary" (click)="adventure.handleOption(opt)">
-        {{ opt.label }}
-      </button>
-    }
-  </mat-card-actions>
+    </mat-card-content>
+    <mat-card-actions align="end" class="actions-container">
+      @for (opt of options(); track opt.label) {
+        <button mat-flat-button color="primary" (click)="adventure.handleOption(opt)">
+          {{ opt.label }}
+        </button>
+      }
+    </mat-card-actions>
+  }
 </mat-card>

@@ -9,13 +9,28 @@
   </button>
 </mat-toolbar>
 
-<div class="game-container">
-  <div class="main-column">
-    <app-dm-card class="dm-area"></app-dm-card>
-  </div>
-  <div class="side-column">
-    <app-character-card class="char-area"></app-character-card>
-    <app-dice-card class="dice-area"></app-dice-card>
-    <app-log-card class="log-area"></app-log-card>
-  </div>
+<div class="game-board" cdkDropListGroup>
+  @for (col of columns; track col.id) {
+    <div class="board-column"
+         cdkDropList
+         [cdkDropListData]="col.items"
+         (cdkDropListDropped)="drop($event)">
+
+      @for (item of col.items; track item) {
+        <div class="board-item" cdkDrag>
+           @switch (item) {
+             @case ('dm') { <app-dm-card class="card-component"></app-dm-card> }
+             @case ('character') { <app-character-card class="card-component"></app-character-card> }
+             @case ('dice') { <app-dice-card class="card-component"></app-dice-card> }
+             @case ('oracle') { <app-oracle-card class="card-component"></app-oracle-card> }
+             @case ('log') { <app-log-card class="card-component"></app-log-card> }
+           }
+
+           <div class="drag-handle" cdkDragHandle>
+             <mat-icon>drag_indicator</mat-icon>
+           </div>
+        </div>
+      }
+    </div>
+  }
 </div>

@@ -1,0 +1,36 @@
+.oracle-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.oracle-container {
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin: 16px 0;
+}
+
+.answer-display {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #673ab7;
+}
+
+.placeholder {
+    color: #999;
+    font-style: italic;
+}
+
+.actions {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+
+    button {
+        min-width: unset;
+        padding: 0 16px;
+    }
+}
