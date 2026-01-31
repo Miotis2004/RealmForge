@@ -25,6 +25,20 @@
     {{ persistence.authError() }}
   </div>
 }
+@if (persistence.userProfile(); as profile) {
+  <section class="account-panel">
+    <h2>Account</h2>
+    <div class="account-row">
+      <span class="account-label">Email</span>
+      <span>{{ profile.email || 'Unknown' }}</span>
+    </div>
+    <div class="account-row">
+      <span class="account-label">Display name</span>
+      <span>{{ profile.displayName || 'Player' }}</span>
+    </div>
+    <mat-checkbox [checked]="profile.isAdmin" disabled>Administrator</mat-checkbox>
+  </section>
+}
 
 <div class="game-board" cdkDropListGroup>
   @for (col of columns; track col.id) {
