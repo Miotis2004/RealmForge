@@ -37,6 +37,19 @@ export class PersistenceService {
     }
   }
 
+  async checkForSave(): Promise<boolean> {
+    const u = this.user();
+    if (!u) return false;
+
+    try {
+        const snap = await getDoc(doc(this.firestore, 'users', u.uid, 'saves', 'latest'));
+        return snap.exists();
+    } catch (e) {
+        console.error('Check save failed', e);
+        return false;
+    }
+  }
+
   async signOut() {
     this.authError.set(null);
     try {

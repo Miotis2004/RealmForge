@@ -1,0 +1,8 @@
+<h2 mat-dialog-title>Welcome to Realm Forge</h2>
+<mat-dialog-content>
+  <p>Would you like to start a new adventure or continue your journey?</p>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button color="warn" (click)="onNewGame()">New Game</button>
+  <button mat-flat-button color="primary" (click)="onContinue()" [disabled]="!data.hasSave">Continue</button>
+</mat-dialog-actions>

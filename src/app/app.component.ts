@@ -51,11 +51,24 @@ export class AppComponent implements OnInit {
     effect(() => {
         const user = this.persistence.user();
         if (user) {
-            this.persistence.loadGame().then(loaded => {
-                if (loaded) {
-                    // Update display after loading state
-                    this.adventure.updateCurrentNode();
-                }
+            this.persistence.checkForSave().then(hasSave => {
+                const dialogRef = this.dialog.open(MainMenuDialogComponent, {
+                    width: '400px',
+                    disableClose: true,
+                    data: { hasSave }
+                });
+
+                dialogRef.afterClosed().subscribe(result => {
+                    if (result === 'continue') {
+                        this.persistence.loadGame().then(loaded => {
+                            if (loaded) {
+                                this.adventure.updateCurrentNode();
+                            }
+                        });
+                    } else if (result === 'new') {
+                        this.adventure.startNewAdventure();
+                    }
+                });
             });
         }
     });

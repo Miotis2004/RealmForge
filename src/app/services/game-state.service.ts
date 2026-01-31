@@ -57,6 +57,15 @@ export class GameStateService {
   }
 
   // Helper to reset state or load
+  reset() {
+    this.character.set(this.getInitialCharacter());
+    this.currentNodeId.set('scene_01_start'); // This might need to be dynamic if start node changes
+    this.gameLog.set([]);
+    this.tags.set([...this.character().tags]);
+    this.combatState.set(null);
+    this.pendingRoll.set(null);
+  }
+
   loadState(state: GameState) {
     this.character.set(state.character);
     this.currentNodeId.set(state.currentNodeId);
