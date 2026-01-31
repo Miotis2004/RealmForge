@@ -16,7 +16,7 @@
           <button mat-stroked-button color="warn" (click)="resetSession()">Reset</button>
         }
         @case ('ready') {
-          <p class="narrative-text">{{ state.node.text }}</p>
+          <p class="narrative-text">{{ nodeText(state.node) }}</p>
           @if (state.node.type === 'combat' || (state.node.monsterIds?.length ?? 0) > 0) {
             <section class="encounter-section">
               <h3>Encounter</h3>
@@ -46,11 +46,11 @@
     }
   </mat-card-content>
   <mat-card-actions align="end" class="actions-container">
-    @if (nodeState$ | async; as state) {
-      @if (state.status === 'ready' && state.node.options?.length) {
-        @for (opt of state.node.options; track opt.nextNode) {
-          <button mat-flat-button color="primary" (click)="goToNode(opt.nextNode)">
-            {{ opt.text }}
+    @if (normalizedOptions$ | async; as options) {
+      @if (options.length) {
+        @for (opt of options; track opt.targetNodeId) {
+          <button mat-flat-button color="primary" (click)="goToNode(opt.targetNodeId)">
+            {{ opt.label }}
           </button>
         }
       }

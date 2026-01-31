@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, isDevMode } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -38,7 +38,22 @@ export class DmCardComponent {
         ),
         startWith({ status: 'loading' as const, nodeId })
       );
+    }),
+    map((state) => {
+      if (isDevMode() && state.status === 'ready') {
+        const nodeRecord = state.node as Record<string, unknown>;
+        const normalizedOptions = this.normalizeOptions(nodeRecord);
+        // eslint-disable-next-line no-console
+        console.log('Loaded node', nodeRecord['nodeId'], nodeRecord['type'], nodeRecord['options']);
+        // eslint-disable-next-line no-console
+        console.log('Normalized options', normalizedOptions);
+      }
+      return state;
     })
+  );
+
+  readonly normalizedOptions$ = this.nodeState$.pipe(
+    map((state) => (state.status === 'ready' ? this.normalizeOptions(state.node) : []))
   );
 
   readonly monsters$ = this.nodeState$.pipe(
@@ -56,6 +71,55 @@ export class DmCardComponent {
   resetSession(): void {
     this.gameSession.reset();
   }
+
+  nodeText(node: AdventureNode): string {
+    const record = node as Record<string, unknown>;
+    return this.getString(record, 'text') ?? this.getString(record, 'prompt') ?? '';
+  }
+
+  private normalizeOptions(node: unknown): NodeOptionNormalized[] {
+    if (!this.isRecord(node)) {
+      return [];
+    }
+
+    const options = node['options'];
+    if (!Array.isArray(options)) {
+      return [];
+    }
+
+    return options
+      .filter(this.isRecord)
+      .map((option) => {
+        const label =
+          this.getString(option, 'label') ??
+          this.getString(option, 'text') ??
+          this.getString(option, 'title') ??
+          '(continue)';
+        const targetNodeId =
+          this.getString(option, 'targetNodeId') ??
+          this.getString(option, 'nextNode') ??
+          this.getString(option, 'next') ??
+          this.getString(option, 'to');
+        const actionType =
+          this.getString(option, 'actionType') ?? 'navigation';
+
+        return {
+          label,
+          targetNodeId: targetNodeId ?? '',
+          actionType: actionType === 'navigation' ? 'navigation' : 'unknown'
+        } satisfies NodeOptionNormalized;
+      })
+      .filter((option) => Boolean(option.targetNodeId));
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
+  }
+
+  private getString(record: Record<string, unknown>, key: string): string | undefined {
+    const value = record[key];
+    return typeof value === 'string' ? value : undefined;
+  }
 }
 
 type NodeState =
@@ -63,3 +127,9 @@ type NodeState =
   | { status: 'loading'; nodeId: string }
   | { status: 'missing'; nodeId: string }
   | { status: 'ready'; node: AdventureNode };
+
+type NodeOptionNormalized = {
+  label: string;
+  targetNodeId: string;
+  actionType: 'navigation' | 'unknown';
+};
