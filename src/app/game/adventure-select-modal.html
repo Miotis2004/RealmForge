@@ -1,0 +1,44 @@
+@if (open) {
+  <div class="modal-backdrop" (click)="close()">
+    <div class="modal-panel" (click)="$event.stopPropagation()">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>Select an Adventure</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          @if (adventures$ | async; as adventures) {
+            @if (adventures.length === 0) {
+              <p>No adventures available.</p>
+            } @else {
+              <div class="adventure-list">
+                @for (adventure of adventures; track adventure.adventureId) {
+                  <div class="adventure-row">
+                    <div class="adventure-details">
+                      <h3>{{ adventure.title }}</h3>
+                      @if (adventure.description) {
+                        <p>{{ adventure.description }}</p>
+                      }
+                      @if (adventure.version !== undefined) {
+                        <p class="version">Version {{ adventure.version }}</p>
+                      }
+                    </div>
+                    <div class="adventure-actions">
+                      <button mat-flat-button color="primary" (click)="selectAdventure(adventure.adventureId)">
+                        Select
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          } @else {
+            <p>Loading adventures...</p>
+          }
+        </mat-card-content>
+        <mat-card-actions align="end">
+          <button mat-button type="button" (click)="close()">Cancel</button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+  </div>
+}

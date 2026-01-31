@@ -1,59 +1,59 @@
 <mat-card class="dm-card">
-  @if (gameState.combatState(); as combat) {
-    <mat-card-header>
-        <mat-card-title>Combat (Round {{ combat.round }})</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-       <p class="narrative-text">
-          {{ adventure.currentDisplayNode()?.text }}
-       </p>
-
-       <div class="turn-order-container">
-           <h3>Turn Order</h3>
-           <div class="turn-list">
-               @for (c of combat.turnOrder; track c.instanceId; let i = $index) {
-                   <div class="combatant-row"
-                        [class.active]="i === combat.currentTurnIndex"
-                        [class.enemy]="!c.isPlayer"
-                        [class.dead]="c.hp <= 0">
-                       <span class="name">{{ c.name }}</span>
-                       <span class="hp">HP: {{ c.hp }} / {{ c.maxHp }}</span>
-                       @if (i === combat.currentTurnIndex) { <span class="indicator">⬅ Current Turn</span> }
-                   </div>
-               }
-           </div>
-       </div>
-    </mat-card-content>
-    <mat-card-actions align="end">
-        @if (combat.turnOrder[combat.currentTurnIndex].isPlayer) {
-            <button mat-flat-button color="warn" (click)="combatEngine.playerAction('attack')">
-                ⚔ Attack
-            </button>
-        } @else {
-             <button mat-button disabled>Enemy Thinking...</button>
+  <mat-card-header>
+    <mat-card-title>Dungeon Master</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    @if (nodeState$ | async; as state) {
+      @switch (state.status) {
+        @case ('idle') {
+          <p>Start a new game to begin your adventure.</p>
         }
-    </mat-card-actions>
-  } @else {
-    <mat-card-header>
-      <mat-card-title>Dungeon Master</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      @if (adventure.isLoading()) {
-        <p>Loading adventure...</p>
-      } @else {
-        @if (adventure.currentDisplayNode(); as node) {
-          <p class="narrative-text">{{ node.text }}</p>
-        } @else {
-          <p>No active scene.</p>
+        @case ('loading') {
+          <p>Loading scene...</p>
+        }
+        @case ('missing') {
+          <p>Node not found: {{ state.nodeId }}</p>
+          <button mat-stroked-button color="warn" (click)="resetSession()">Reset</button>
+        }
+        @case ('ready') {
+          <p class="narrative-text">{{ state.node.text }}</p>
+          @if (state.node.type === 'combat' || (state.node.monsterIds?.length ?? 0) > 0) {
+            <section class="encounter-section">
+              <h3>Encounter</h3>
+              @if (monsters$ | async; as monsters) {
+                @if (monsters.length) {
+                  <div class="monster-list">
+                    @for (monster of monsters; track monster.id) {
+                      <div class="monster-card">
+                        <strong>{{ monster.name }}</strong>
+                        <div class="monster-stats">
+                          <span>HP: {{ monster.stats?.hp ?? '—' }}</span>
+                          <span>AC: {{ monster.stats?.ac ?? '—' }}</span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+                } @else {
+                  <p>No monster data found.</p>
+                }
+              } @else {
+                <p>Loading monsters...</p>
+              }
+            </section>
+          }
         }
       }
-    </mat-card-content>
-    <mat-card-actions align="end" class="actions-container">
-      @for (opt of options(); track opt.label) {
-        <button mat-flat-button color="primary" (click)="adventure.handleOption(opt)">
-          {{ opt.label }}
-        </button>
+    }
+  </mat-card-content>
+  <mat-card-actions align="end" class="actions-container">
+    @if (nodeState$ | async; as state) {
+      @if (state.status === 'ready' && state.node.options?.length) {
+        @for (opt of state.node.options; track opt.nextNode) {
+          <button mat-flat-button color="primary" (click)="goToNode(opt.nextNode)">
+            {{ opt.text }}
+          </button>
+        }
       }
-    </mat-card-actions>
-  }
+    }
+  </mat-card-actions>
 </mat-card>

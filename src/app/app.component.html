@@ -50,6 +50,11 @@
   (closed)="importOpen = false"
   (imported)="onImport($event)"
 ></rf-import-json-modal>
+<rf-adventure-select-modal
+  [open]="adventureSelectOpen"
+  (closed)="adventureSelectOpen = false"
+  (selected)="onAdventureSelected($event)"
+></rf-adventure-select-modal>
 
 <div class="game-board" cdkDropListGroup>
   @for (col of columns; track col.id) {
