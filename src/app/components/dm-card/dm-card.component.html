@@ -17,29 +17,98 @@
         }
         @case ('ready') {
           <p class="narrative-text">{{ nodeText(state.node) }}</p>
-          @if (state.node.type === 'combat' || (state.node.monsterIds?.length ?? 0) > 0) {
-            <section class="encounter-section">
-              <h3>Encounter</h3>
-              @if (monsters$ | async; as monsters) {
-                @if (monsters.length) {
-                  <div class="monster-list">
-                    @for (monster of monsters; track monster.id) {
-                      <div class="monster-card">
-                        <strong>{{ monster.name }}</strong>
-                        <div class="monster-stats">
-                          <span>HP: {{ monster.stats?.hp ?? '—' }}</span>
-                          <span>AC: {{ monster.stats?.ac ?? '—' }}</span>
-                        </div>
-                      </div>
+          @if (combatState(); as combat) {
+            @if (combat?.active) {
+              <section class="combat-section">
+                <div class="combat-header">
+                  <h3>Combat</h3>
+                  <span class="round-label">Round {{ combat.round }}</span>
+                </div>
+                <div class="turn-order">
+                  <h4>Initiative</h4>
+                  @for (combatant of combat.order; track combatant.id) {
+                    <div
+                      class="combatant-row"
+                      [class.active]="combatant.id === combat.order[combat.turnIndex].id"
+                      [class.enemy]="combatant.side === 'monster'"
+                      [class.dead]="!combatant.alive"
+                    >
+                      <span class="name">{{ combatant.name }}</span>
+                      <span class="initiative">{{ combatantInitiative(combatant) }}</span>
+                      <span class="hp">HP {{ combatant.hp }}/{{ combatant.maxHp }}</span>
+                      <span class="ac">AC {{ combatant.ac }}</span>
+                    </div>
+                  }
+                </div>
+
+                @if (currentCombatant(combat); as active) {
+                  <div class="turn-details">
+                    <h4>Current Turn: {{ active.name }}</h4>
+                    @if (active.unconscious) {
+                      <p>Hero is unconscious.</p>
+                      @if (active.deathSaves) {
+                        <p>
+                          Death saves: {{ active.deathSaves.successes }} successes,
+                          {{ active.deathSaves.failures }} failures.
+                        </p>
+                      }
+                    }
+                    @if (active.side === 'monster') {
+                      <p>Enemy is acting...</p>
                     }
                   </div>
-                } @else {
-                  <p>No monster data found.</p>
                 }
-              } @else {
-                <p>Loading monsters...</p>
-              }
-            </section>
+
+                <div class="combat-actions">
+                  @if (isHeroTurn(combat)) {
+                    @if (!combat.order[combat.turnIndex].unconscious) {
+                      <div class="action-buttons">
+                        @for (enemy of combat.order; track enemy.id) {
+                          @if (enemy.side === 'monster' && enemy.alive) {
+                            <button mat-stroked-button color="primary" (click)="heroAttack(enemy.id)">
+                              Attack {{ enemy.name }}
+                            </button>
+                          }
+                        }
+                      </div>
+                      <button mat-flat-button color="accent" (click)="endTurn()">End Turn</button>
+                    }
+                  }
+                </div>
+
+                <div class="combat-log">
+                  <h4>Combat Log</h4>
+                  <ul>
+                    @for (entry of visibleLog(combat); track entry) {
+                      <li>{{ entry }}</li>
+                    }
+                  </ul>
+                </div>
+              </section>
+            } @else if (state.node.type === 'combat' || (state.node.monsterIds?.length ?? 0) > 0) {
+              <section class="encounter-section">
+                <h3>Encounter</h3>
+                @if (monsters$ | async; as monsters) {
+                  @if (monsters.length) {
+                    <div class="monster-list">
+                      @for (monster of monsters; track monster.id) {
+                        <div class="monster-card">
+                          <strong>{{ monster.name }}</strong>
+                          <div class="monster-stats">
+                            <span>HP: {{ monster.stats?.hp ?? '—' }}</span>
+                            <span>AC: {{ monster.stats?.ac ?? '—' }}</span>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <p>No monster data found.</p>
+                  }
+                } @else {
+                  <p>Loading monsters...</p>
+                }
+              </section>
+            }
           }
         }
       }
@@ -47,7 +116,7 @@
   </mat-card-content>
   <mat-card-actions align="end" class="actions-container">
     @if (normalizedOptions$ | async; as options) {
-      @if (options.length) {
+      @if (options.length && !(combatState()?.active ?? false)) {
         @for (opt of options; track opt.targetNodeId) {
           <button mat-flat-button color="primary" (click)="goToNode(opt.targetNodeId)">
             {{ opt.label }}

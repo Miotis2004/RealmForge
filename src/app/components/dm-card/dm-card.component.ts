@@ -1,13 +1,17 @@
-import { Component, inject, isDevMode } from '@angular/core';
+import { Component, effect, inject, isDevMode } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { toObservable } from '@angular/core/rxjs-interop';
-import { combineLatest, map, of, startWith, switchMap } from 'rxjs';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
+import { combineLatest, map, of, startWith, switchMap, tap } from 'rxjs';
 import { AdventureRepository } from '../../core/services/adventure-repository';
 import { GameSessionService } from '../../core/services/game-session.service';
 import { MonsterRepository } from '../../core/services/monster-repository';
 import { AdventureNode } from '../../core/models/adventure-models';
+import { CombatService } from '../../core/services/combat.service';
+import { GameStateService } from '../../services/game-state.service';
+import { CombatState, HeroSnapshot } from '../../core/models/combat-models';
+import { abilityMod } from '../../core/dnd/dice';
 
 @Component({
   selector: 'app-dm-card',
@@ -20,6 +24,11 @@ export class DmCardComponent {
   private adventureRepository = inject(AdventureRepository);
   private gameSession = inject(GameSessionService);
   private monsterRepository = inject(MonsterRepository);
+  private combatService = inject(CombatService);
+  private gameState = inject(GameStateService);
+  private lastAutoTurnKey: string | null = null;
+
+  readonly combatState = this.combatService.state;
 
   private adventureId$ = toObservable(this.gameSession.currentAdventureId);
   private nodeId$ = toObservable(this.gameSession.currentNodeId);
@@ -64,6 +73,34 @@ export class DmCardComponent {
     })
   );
 
+  constructor() {
+    combineLatest([this.nodeState$, this.adventureId$])
+      .pipe(
+        tap(([state, adventureId]) => {
+          if (state.status !== 'ready' || !adventureId) {
+            return;
+          }
+          const isCombatNode = state.node.type === 'combat' || (state.node.monsterIds?.length ?? 0) > 0;
+          if (isCombatNode) {
+            void this.combatService.startCombat(adventureId, state.node, this.getHeroSnapshot());
+          } else if (this.combatService.state()) {
+            this.combatService.clearCombat();
+          }
+        }),
+        takeUntilDestroyed()
+      )
+      .subscribe();
+
+    effect(() => {
+      const combat = this.combatService.state();
+      if (!combat?.active) {
+        this.lastAutoTurnKey = null;
+        return;
+      }
+      this.scheduleMonsterTurn(combat);
+    });
+  }
+
   goToNode(nodeId: string): void {
     this.gameSession.goToNode(nodeId);
   }
@@ -75,6 +112,43 @@ export class DmCardComponent {
   nodeText(node: AdventureNode): string {
     const record = node as Record<string, unknown>;
     return this.getString(record, 'text') ?? this.getString(record, 'prompt') ?? '';
+  }
+
+  heroAttack(targetId: string): void {
+    this.combatService.heroAttack(targetId);
+  }
+
+  endTurn(): void {
+    this.combatService.endTurn();
+  }
+
+  isHeroTurn(combat: CombatState): boolean {
+    return combat.order[combat.turnIndex]?.id === 'hero';
+  }
+
+  currentCombatant(combat: CombatState): CombatantView | null {
+    const current = combat.order[combat.turnIndex];
+    if (!current) return null;
+    return {
+      id: current.id,
+      name: current.name,
+      side: current.side,
+      hp: current.hp,
+      maxHp: current.maxHp,
+      ac: current.ac,
+      alive: current.alive,
+      unconscious: current.unconscious ?? false,
+      deathSaves: current.deathSaves
+    };
+  }
+
+  visibleLog(combat: CombatState): string[] {
+    return combat.log.slice(-8).map((entry) => entry.text);
+  }
+
+  combatantInitiative(combatant: CombatState['order'][number]): string {
+    const dexMod = abilityMod(combatant.abilities.dex);
+    return `${combatant.initiative} (DEX ${dexMod >= 0 ? '+' : ''}${dexMod})`;
   }
 
   private normalizeOptions(node: unknown): NodeOptionNormalized[] {
@@ -120,6 +194,38 @@ export class DmCardComponent {
     const value = record[key];
     return typeof value === 'string' ? value : undefined;
   }
+
+  private getHeroSnapshot(): HeroSnapshot {
+    const hero = this.gameState.character();
+    return {
+      name: hero.name,
+      level: hero.level,
+      hp: hero.hp,
+      maxHp: hero.maxHp,
+      ac: hero.ac,
+      abilities: {
+        str: hero.stats.strength,
+        dex: hero.stats.dexterity,
+        con: hero.stats.constitution,
+        int: hero.stats.intelligence,
+        wis: hero.stats.wisdom,
+        cha: hero.stats.charisma
+      }
+    };
+  }
+
+  private scheduleMonsterTurn(combat: CombatState): void {
+    const current = combat.order[combat.turnIndex];
+    if (!current || current.side !== 'monster' || !current.alive) {
+      return;
+    }
+    const key = `${combat.round}-${combat.turnIndex}-${current.id}`;
+    if (this.lastAutoTurnKey === key) {
+      return;
+    }
+    this.lastAutoTurnKey = key;
+    setTimeout(() => this.combatService.monsterAutoTurn(), 0);
+  }
 }
 
 type NodeState =
@@ -132,4 +238,16 @@ type NodeOptionNormalized = {
   label: string;
   targetNodeId: string;
   actionType: 'navigation' | 'unknown';
+};
+
+type CombatantView = {
+  id: string;
+  name: string;
+  side: string;
+  hp: number;
+  maxHp: number;
+  ac: number;
+  alive: boolean;
+  unconscious: boolean;
+  deathSaves?: { successes: number; failures: number };
 };
