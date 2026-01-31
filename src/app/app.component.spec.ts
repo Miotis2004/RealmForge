@@ -11,10 +11,15 @@ describe('AppComponent', () => {
   beforeEach(async () => {
     const persistenceMock = {
         user: signal(null),
+        isAuthLoading: signal(false),
+        authError: signal(null),
         loadGame: jasmine.createSpy('loadGame').and.returnValue(Promise.resolve(false)),
         saveGame: jasmine.createSpy('saveGame'),
         clearSave: jasmine.createSpy('clearSave').and.returnValue(Promise.resolve()),
-        hasSave: jasmine.createSpy('hasSave').and.returnValue(false)
+        hasSave: jasmine.createSpy('hasSave').and.returnValue(false),
+        signIn: jasmine.createSpy('signIn').and.returnValue(Promise.resolve()),
+        signUp: jasmine.createSpy('signUp').and.returnValue(Promise.resolve()),
+        signOut: jasmine.createSpy('signOut').and.returnValue(Promise.resolve())
     };
 
     const adventureMock = {

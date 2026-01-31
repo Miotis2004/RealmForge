@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { GameStateService } from './game-state.service';
 import { GameState } from '../models/game-state.model';
 import { AUTH, FIRESTORE } from '../firebase.tokens';
-import { signInAnonymously, onAuthStateChanged, User } from 'firebase/auth';
+import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 
 @Injectable({
@@ -15,17 +15,49 @@ export class PersistenceService {
 
   readonly user = signal<User | null>(null);
   readonly isAuthLoading = signal(true);
+  readonly authError = signal<string | null>(null);
 
   constructor() {
      onAuthStateChanged(this.auth, (u) => {
          this.user.set(u);
          this.isAuthLoading.set(false);
      });
-     // Auto sign in for now
-     signInAnonymously(this.auth).catch(e => {
-         console.error('Auth failed', e);
-         this.isAuthLoading.set(false);
-     });
+  }
+
+  async signUp(email: string, password: string) {
+    this.authError.set(null);
+    try {
+      await createUserWithEmailAndPassword(this.auth, email, password);
+      this.gameStateService.addLog({ type: 'info', message: 'Account created.', timestamp: Date.now() });
+    } catch (e) {
+      console.error('Sign up failed', e);
+      this.authError.set(this.getErrorMessage(e));
+      this.gameStateService.addLog({ type: 'info', message: 'Sign up failed.', timestamp: Date.now() });
+    }
+  }
+
+  async signIn(email: string, password: string) {
+    this.authError.set(null);
+    try {
+      await signInWithEmailAndPassword(this.auth, email, password);
+      this.gameStateService.addLog({ type: 'info', message: 'Signed in.', timestamp: Date.now() });
+    } catch (e) {
+      console.error('Sign in failed', e);
+      this.authError.set(this.getErrorMessage(e));
+      this.gameStateService.addLog({ type: 'info', message: 'Sign in failed.', timestamp: Date.now() });
+    }
+  }
+
+  async signOut() {
+    this.authError.set(null);
+    try {
+      await signOut(this.auth);
+      this.gameStateService.addLog({ type: 'info', message: 'Signed out.', timestamp: Date.now() });
+    } catch (e) {
+      console.error('Sign out failed', e);
+      this.authError.set(this.getErrorMessage(e));
+      this.gameStateService.addLog({ type: 'info', message: 'Sign out failed.', timestamp: Date.now() });
+    }
   }
 
   async saveGame() {
@@ -73,5 +105,12 @@ export class PersistenceService {
       } catch (e) {
           console.error(e);
       }
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error && typeof error === 'object' && 'message' in error) {
+      return String((error as { message: string }).message);
+    }
+    return 'Unknown authentication error.';
   }
 }
