@@ -14,15 +14,17 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { ContentImportService } from './core/services/content-import.service';
+import { ImportJsonModalComponent } from './admin/import-json-modal';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [
     CommonModule,
-    DmCardComponent, 
-    CharacterCardComponent, 
-    LogCardComponent, 
+    DmCardComponent,
+    CharacterCardComponent,
+    LogCardComponent,
     DiceCardComponent,
     OracleCardComponent,
     MatButtonModule,
@@ -30,7 +32,8 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
     MatIconModule,
     MatCheckboxModule,
     MatDialogModule,
-    DragDropModule
+    DragDropModule,
+    ImportJsonModalComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -40,6 +43,8 @@ export class AppComponent implements OnInit {
   adventure = inject(AdventureEngineService);
   persistence = inject(PersistenceService);
   dialog = inject(MatDialog);
+  contentImport = inject(ContentImportService);
+  importOpen = false;
 
   // Define columns as a public property for the template
   columns: {id: string, items: string[]}[] = [
@@ -114,5 +119,26 @@ export class AppComponent implements OnInit {
         event.currentIndex,
       );
     }
+  }
+
+  async onImport(jsonText: string): Promise<void> {
+    try {
+      const result = await this.contentImport.importFromJsonText(jsonText);
+      const summary =
+        result.kind === 'bestiary'
+          ? `Imported ${result.written} monsters.`
+          : `Imported ${result.written} adventure records for ${result.adventureId ?? 'adventure'}.`;
+      alert(summary);
+      this.importOpen = false;
+    } catch (error) {
+      alert(this.getErrorMessage(error));
+    }
+  }
+
+  private getErrorMessage(error: unknown): string {
+    if (error && typeof error === 'object' && 'message' in error) {
+      return String((error as { message: string }).message);
+    }
+    return 'Import failed.';
   }
 }
