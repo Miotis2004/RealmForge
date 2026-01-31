@@ -15,6 +15,31 @@
     gap: 8px;
 }
 
+.encounter-section {
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.monster-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.monster-card {
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.monster-stats {
+    display: flex;
+    gap: 12px;
+    font-size: 0.9rem;
+    margin-top: 4px;
+}
+
 .turn-order-container {
     margin-top: 16px;
     border-top: 1px solid #ccc;

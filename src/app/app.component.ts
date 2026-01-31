@@ -7,6 +7,7 @@ import { OracleCardComponent } from './components/oracle-card/oracle-card.compon
 import { MainMenuDialogComponent } from './components/main-menu-dialog/main-menu-dialog.component';
 import { AdventureEngineService } from './services/adventure-engine.service';
 import { PersistenceService } from './services/persistence.service';
+import { AdventureSelectModalComponent } from './game/adventure-select-modal';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
@@ -16,6 +17,9 @@ import { CommonModule } from '@angular/common';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { ContentImportService } from './core/services/content-import.service';
 import { ImportJsonModalComponent } from './admin/import-json-modal';
+import { AdventureRepository } from './core/services/adventure-repository';
+import { GameSessionService } from './core/services/game-session.service';
+import { firstValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -33,7 +37,8 @@ import { ImportJsonModalComponent } from './admin/import-json-modal';
     MatCheckboxModule,
     MatDialogModule,
     DragDropModule,
-    ImportJsonModalComponent
+    ImportJsonModalComponent,
+    AdventureSelectModalComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -44,7 +49,10 @@ export class AppComponent implements OnInit {
   persistence = inject(PersistenceService);
   dialog = inject(MatDialog);
   contentImport = inject(ContentImportService);
+  adventureRepository = inject(AdventureRepository);
+  gameSession = inject(GameSessionService);
   importOpen = false;
+  adventureSelectOpen = false;
 
   // Define columns as a public property for the template
   columns: {id: string, items: string[]}[] = [
@@ -77,7 +85,7 @@ export class AppComponent implements OnInit {
                             }
                         });
                     } else if (result === 'new') {
-                        this.adventure.startNewAdventure();
+                        this.openAdventureSelect();
                     }
                 });
             });
@@ -95,9 +103,7 @@ export class AppComponent implements OnInit {
   }
   
   newGame() {
-    this.persistence.clearSave().then(() => {
-        window.location.reload();
-    });
+    this.openAdventureSelect();
   }
 
   async signInWithGoogle() {
@@ -106,6 +112,17 @@ export class AppComponent implements OnInit {
 
   async signOut() {
     await this.persistence.signOut();
+  }
+
+  openAdventureSelect() {
+    this.adventureSelectOpen = true;
+  }
+
+  async onAdventureSelected(adventureId: string): Promise<void> {
+    const adventure = await firstValueFrom(this.adventureRepository.getAdventure$(adventureId));
+    const startNodeId = adventure?.startNodeId || 'scene_01_start';
+    this.gameSession.startNewGame(adventureId, startNodeId);
+    this.adventureSelectOpen = false;
   }
 
   drop(event: CdkDragDrop<string[]>) {

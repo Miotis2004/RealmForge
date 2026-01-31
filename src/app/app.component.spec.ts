@@ -6,6 +6,9 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { PersistenceService } from './services/persistence.service';
 import { AdventureEngineService } from './services/adventure-engine.service';
 import { DragDropModule } from '@angular/cdk/drag-drop';
+import { AdventureRepository } from './core/services/adventure-repository';
+import { GameSessionService } from './core/services/game-session.service';
+import { of } from 'rxjs';
 
 describe('AppComponent', () => {
   beforeEach(async () => {
@@ -17,6 +20,7 @@ describe('AppComponent', () => {
         saveGame: jasmine.createSpy('saveGame'),
         clearSave: jasmine.createSpy('clearSave').and.returnValue(Promise.resolve()),
         hasSave: jasmine.createSpy('hasSave').and.returnValue(false),
+        checkForSave: jasmine.createSpy('checkForSave').and.returnValue(Promise.resolve(false)),
         signInWithGoogle: jasmine.createSpy('signInWithGoogle').and.returnValue(Promise.resolve()),
         signOut: jasmine.createSpy('signOut').and.returnValue(Promise.resolve())
     };
@@ -30,6 +34,19 @@ describe('AppComponent', () => {
         getAvailableOptions: () => [],
     };
 
+    const adventureRepositoryMock = {
+      getAdventure$: jasmine.createSpy('getAdventure$').and.returnValue(of(null)),
+      listPublishedAdventures: jasmine.createSpy('listPublishedAdventures').and.returnValue(of([]))
+    };
+
+    const gameSessionMock = {
+      currentAdventureId: signal(null),
+      currentNodeId: signal(null),
+      startNewGame: jasmine.createSpy('startNewGame'),
+      goToNode: jasmine.createSpy('goToNode'),
+      reset: jasmine.createSpy('reset')
+    };
+
     await TestBed.configureTestingModule({
       imports: [AppComponent],
       providers: [
@@ -37,7 +54,9 @@ describe('AppComponent', () => {
           provideHttpClient(),
           provideAnimationsAsync(),
           { provide: PersistenceService, useValue: persistenceMock },
-          { provide: AdventureEngineService, useValue: adventureMock }
+          { provide: AdventureEngineService, useValue: adventureMock },
+          { provide: AdventureRepository, useValue: adventureRepositoryMock },
+          { provide: GameSessionService, useValue: gameSessionMock }
       ]
     }).compileComponents();
   });
