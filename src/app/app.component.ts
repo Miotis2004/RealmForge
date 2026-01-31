@@ -9,11 +9,8 @@ import { PersistenceService } from './services/persistence.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 @Component({
   selector: 'app-root',
@@ -28,9 +25,6 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
     MatButtonModule,
     MatToolbarModule,
     MatIconModule,
-    MatFormFieldModule,
-    MatInputModule,
-    ReactiveFormsModule,
     DragDropModule
   ],
   templateUrl: './app.component.html',
@@ -40,7 +34,6 @@ export class AppComponent implements OnInit {
   title = 'realm-forge';
   adventure = inject(AdventureEngineService);
   persistence = inject(PersistenceService);
-  private formBuilder = inject(FormBuilder);
 
   // Define columns as a public property for the template
   columns: {id: string, items: string[]}[] = [
@@ -53,11 +46,6 @@ export class AppComponent implements OnInit {
           items: ['character', 'dice', 'oracle', 'log']
       }
   ];
-
-  authForm = this.formBuilder.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]]
-  });
 
   constructor() {
     effect(() => {
@@ -88,24 +76,8 @@ export class AppComponent implements OnInit {
     });
   }
 
-  async signIn() {
-    if (this.authForm.invalid) {
-      this.authForm.markAllAsTouched();
-      return;
-    }
-
-    const { email, password } = this.authForm.getRawValue();
-    await this.persistence.signIn(email, password);
-  }
-
-  async signUp() {
-    if (this.authForm.invalid) {
-      this.authForm.markAllAsTouched();
-      return;
-    }
-
-    const { email, password } = this.authForm.getRawValue();
-    await this.persistence.signUp(email, password);
+  async signInWithGoogle() {
+    await this.persistence.signInWithGoogle();
   }
 
   async signOut() {

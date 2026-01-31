@@ -17,8 +17,7 @@ describe('AppComponent', () => {
         saveGame: jasmine.createSpy('saveGame'),
         clearSave: jasmine.createSpy('clearSave').and.returnValue(Promise.resolve()),
         hasSave: jasmine.createSpy('hasSave').and.returnValue(false),
-        signIn: jasmine.createSpy('signIn').and.returnValue(Promise.resolve()),
-        signUp: jasmine.createSpy('signUp').and.returnValue(Promise.resolve()),
+        signInWithGoogle: jasmine.createSpy('signInWithGoogle').and.returnValue(Promise.resolve()),
         signOut: jasmine.createSpy('signOut').and.returnValue(Promise.resolve())
     };
 
