@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { GameStateService } from './game-state.service';
 import { GameState } from '../models/game-state.model';
 import { AUTH, FIRESTORE } from '../firebase.tokens';
-import { createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from 'firebase/auth';
+import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 
 @Injectable({
@@ -24,27 +24,29 @@ export class PersistenceService {
      });
   }
 
-  async signUp(email: string, password: string) {
+  async signInWithGoogle() {
     this.authError.set(null);
     try {
-      await createUserWithEmailAndPassword(this.auth, email, password);
-      this.gameStateService.addLog({ type: 'info', message: 'Account created.', timestamp: Date.now() });
-    } catch (e) {
-      console.error('Sign up failed', e);
-      this.authError.set(this.getErrorMessage(e));
-      this.gameStateService.addLog({ type: 'info', message: 'Sign up failed.', timestamp: Date.now() });
-    }
-  }
-
-  async signIn(email: string, password: string) {
-    this.authError.set(null);
-    try {
-      await signInWithEmailAndPassword(this.auth, email, password);
-      this.gameStateService.addLog({ type: 'info', message: 'Signed in.', timestamp: Date.now() });
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(this.auth, provider);
+      this.gameStateService.addLog({ type: 'info', message: 'Signed in with Google.', timestamp: Date.now() });
     } catch (e) {
       console.error('Sign in failed', e);
       this.authError.set(this.getErrorMessage(e));
       this.gameStateService.addLog({ type: 'info', message: 'Sign in failed.', timestamp: Date.now() });
+    }
+  }
+
+  async checkForSave(): Promise<boolean> {
+    const u = this.user();
+    if (!u) return false;
+
+    try {
+        const snap = await getDoc(doc(this.firestore, 'users', u.uid, 'saves', 'latest'));
+        return snap.exists();
+    } catch (e) {
+        console.error('Check save failed', e);
+        return false;
     }
   }
 

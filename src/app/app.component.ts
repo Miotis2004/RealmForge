@@ -9,11 +9,10 @@ import { PersistenceService } from './services/persistence.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MainMenuDialogComponent } from './components/main-menu-dialog/main-menu-dialog.component';
 
 @Component({
   selector: 'app-root',
@@ -28,10 +27,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
     MatButtonModule,
     MatToolbarModule,
     MatIconModule,
-    MatFormFieldModule,
-    MatInputModule,
-    ReactiveFormsModule,
-    DragDropModule
+    DragDropModule,
+    MatDialogModule
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -40,7 +37,7 @@ export class AppComponent implements OnInit {
   title = 'realm-forge';
   adventure = inject(AdventureEngineService);
   persistence = inject(PersistenceService);
-  private formBuilder = inject(FormBuilder);
+  dialog = inject(MatDialog);
 
   // Define columns as a public property for the template
   columns: {id: string, items: string[]}[] = [
@@ -54,20 +51,28 @@ export class AppComponent implements OnInit {
       }
   ];
 
-  authForm = this.formBuilder.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]]
-  });
-
   constructor() {
     effect(() => {
         const user = this.persistence.user();
         if (user) {
-            this.persistence.loadGame().then(loaded => {
-                if (loaded) {
-                    // Update display after loading state
-                    this.adventure.updateCurrentNode();
-                }
+            this.persistence.checkForSave().then(hasSave => {
+                const dialogRef = this.dialog.open(MainMenuDialogComponent, {
+                    width: '400px',
+                    disableClose: true,
+                    data: { hasSave }
+                });
+
+                dialogRef.afterClosed().subscribe(result => {
+                    if (result === 'continue') {
+                        this.persistence.loadGame().then(loaded => {
+                            if (loaded) {
+                                this.adventure.updateCurrentNode();
+                            }
+                        });
+                    } else if (result === 'new') {
+                        this.adventure.startNewAdventure();
+                    }
+                });
             });
         }
     });
@@ -88,24 +93,8 @@ export class AppComponent implements OnInit {
     });
   }
 
-  async signIn() {
-    if (this.authForm.invalid) {
-      this.authForm.markAllAsTouched();
-      return;
-    }
-
-    const { email, password } = this.authForm.getRawValue();
-    await this.persistence.signIn(email, password);
-  }
-
-  async signUp() {
-    if (this.authForm.invalid) {
-      this.authForm.markAllAsTouched();
-      return;
-    }
-
-    const { email, password } = this.authForm.getRawValue();
-    await this.persistence.signUp(email, password);
+  async signInWithGoogle() {
+    await this.persistence.signInWithGoogle();
   }
 
   async signOut() {

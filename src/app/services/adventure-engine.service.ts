@@ -90,6 +90,11 @@ export class AdventureEngineService {
     this.currentDisplayNode.set(node);
   }
 
+  startNewAdventure() {
+      this.gameState.reset();
+      this.resetToStartNode();
+  }
+
   private resetToStartNode() {
     if (!this.startNodeId) {
       return;
