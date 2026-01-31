@@ -32,6 +32,28 @@
   font-size: 13px;
 }
 
+.account-panel {
+  margin: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  background: #1f1f1f;
+  color: #f5f5f5;
+  display: grid;
+  gap: 12px;
+}
+
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 0.95rem;
+}
+
+.account-label {
+  font-weight: 600;
+  color: #c7c7c7;
+}
+
 .game-board {
   display: flex;
   height: calc(100vh - 64px);

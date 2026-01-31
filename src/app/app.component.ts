@@ -13,6 +13,7 @@ import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
 import { MainMenuDialogComponent } from './components/main-menu-dialog/main-menu-dialog.component';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 @Component({
   selector: 'app-root',
@@ -28,6 +29,7 @@ import { MainMenuDialogComponent } from './components/main-menu-dialog/main-menu
     MatButtonModule,
     MatToolbarModule,
     MatIconModule,
+    MatCheckboxModule,
     MatDialogModule,
     DragDropModule
   ],

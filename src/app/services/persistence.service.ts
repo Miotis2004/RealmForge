@@ -3,7 +3,14 @@ import { GameStateService } from './game-state.service';
 import { GameState } from '../models/game-state.model';
 import { AUTH, FIRESTORE } from '../firebase.tokens';
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signOut, User } from 'firebase/auth';
-import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, setDoc, serverTimestamp } from 'firebase/firestore';
+
+type UserProfile = {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  isAdmin: boolean;
+};
 
 @Injectable({
   providedIn: 'root'
@@ -14,13 +21,18 @@ export class PersistenceService {
   private firestore = inject(FIRESTORE);
 
   readonly user = signal<User | null>(null);
+  readonly userProfile = signal<UserProfile | null>(null);
   readonly isAuthLoading = signal(true);
   readonly authError = signal<string | null>(null);
 
   constructor() {
      onAuthStateChanged(this.auth, (u) => {
          this.user.set(u);
+         this.userProfile.set(null);
          this.isAuthLoading.set(false);
+         if (u) {
+           this.ensureUserProfile(u).catch((e) => console.error('User profile sync failed', e));
+         }
      });
   }
 
@@ -107,6 +119,37 @@ export class PersistenceService {
       } catch (e) {
           console.error(e);
       }
+  }
+
+  private async ensureUserProfile(user: User): Promise<void> {
+    const profileRef = doc(this.firestore, 'users', user.uid);
+    const snapshot = await getDoc(profileRef);
+    if (snapshot.exists()) {
+      const data = snapshot.data() as UserProfile;
+      this.userProfile.set({
+        uid: user.uid,
+        email: data.email ?? user.email ?? null,
+        displayName: data.displayName ?? user.displayName ?? null,
+        isAdmin: Boolean(data.isAdmin)
+      });
+      return;
+    }
+
+    const isAdmin = await this.isFirstUser();
+    const profile: UserProfile = {
+      uid: user.uid,
+      email: user.email ?? null,
+      displayName: user.displayName ?? null,
+      isAdmin
+    };
+    await setDoc(profileRef, { ...profile, createdAt: serverTimestamp() });
+    this.userProfile.set(profile);
+  }
+
+  private async isFirstUser(): Promise<boolean> {
+    const usersRef = collection(this.firestore, 'users');
+    const snapshot = await getDocs(query(usersRef, limit(1)));
+    return snapshot.empty;
   }
 
   private getErrorMessage(error: unknown): string {
