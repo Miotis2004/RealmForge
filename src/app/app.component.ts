@@ -9,8 +9,10 @@ import { PersistenceService } from './services/persistence.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
+import { MainMenuDialogComponent } from './components/main-menu-dialog/main-menu-dialog.component';
 
 @Component({
   selector: 'app-root',
@@ -22,9 +24,11 @@ import { CommonModule } from '@angular/common';
     LogCardComponent, 
     DiceCardComponent,
     OracleCardComponent,
+    MainMenuDialogComponent,
     MatButtonModule,
     MatToolbarModule,
     MatIconModule,
+    MatDialogModule,
     DragDropModule
   ],
   templateUrl: './app.component.html',
@@ -34,6 +38,7 @@ export class AppComponent implements OnInit {
   title = 'realm-forge';
   adventure = inject(AdventureEngineService);
   persistence = inject(PersistenceService);
+  dialog = inject(MatDialog);
 
   // Define columns as a public property for the template
   columns: {id: string, items: string[]}[] = [
@@ -58,7 +63,7 @@ export class AppComponent implements OnInit {
                     data: { hasSave }
                 });
 
-                dialogRef.afterClosed().subscribe(result => {
+                dialogRef.afterClosed().subscribe((result: 'continue' | 'new' | undefined) => {
                     if (result === 'continue') {
                         this.persistence.loadGame().then(loaded => {
                             if (loaded) {
