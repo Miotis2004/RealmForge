@@ -39,8 +39,23 @@ export type CombatState = {
   turnIndex: number;
   order: Combatant[];
   log: CombatLogEntry[];
+  pendingRoll?: CombatPendingRoll;
+  awaitingPlayer: boolean;
+  autoStepDelayMs: number;
   victoryNodeId?: string;
   defeatNodeId?: string;
+};
+
+export type CombatPendingRoll = {
+  id: string;
+  kind: 'hero_initiative' | 'hero_attack' | 'hero_damage' | 'death_save';
+  actorId: string;
+  targetId?: string;
+  label: string;
+  expression: string;
+  modifier: number;
+  critical?: boolean;
+  createdAt: number;
 };
 
 export type HeroSnapshot = {
