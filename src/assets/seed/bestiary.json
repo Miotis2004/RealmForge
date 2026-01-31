@@ -1,0 +1,26 @@
+[
+    {
+      "id": "goblin_guard",
+      "name": "Goblin Guard",
+      "stats": { "hp": 7, "ac": 12, "speed": 30 },
+      "behavior": [
+        {
+            "priority": 1,
+            "condition": "always",
+            "action": "scimitar_attack"
+        }
+      ]
+    },
+    {
+      "id": "skeleton_warrior",
+      "name": "Skeleton Warrior",
+      "stats": { "hp": 13, "ac": 13, "speed": 30 },
+      "behavior": [
+        {
+            "priority": 1,
+            "condition": "always",
+            "action": "shortsword_attack"
+        }
+      ]
+    }
+]

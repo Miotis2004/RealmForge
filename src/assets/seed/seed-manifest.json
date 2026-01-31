@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "files": [
+    { "path": "seed/bestiary.json", "type": "bestiary" },
+    { "path": "seed/tutorial-dungeon.json", "type": "adventure" }
+  ]
+}
