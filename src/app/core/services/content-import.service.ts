@@ -1,12 +1,13 @@
 import { Injectable, inject } from '@angular/core';
-import { Auth, getIdTokenResult } from 'firebase/auth';
+import { Auth } from 'firebase/auth';
 import {
   doc,
   serverTimestamp,
   writeBatch,
   DocumentReference,
   SetOptions,
-  Firestore
+  Firestore,
+  getDoc
 } from 'firebase/firestore';
 import { AUTH, FIRESTORE } from '../../firebase.tokens';
 
@@ -39,8 +40,9 @@ export class ContentImportService {
       throw new Error('Admin privileges required.');
     }
 
-    const token = await getIdTokenResult(user);
-    if (token.claims?.['admin'] !== true) {
+    const profileSnap = await getDoc(doc(this.firestore, 'users', user.uid));
+    const profileData = profileSnap.exists() ? (profileSnap.data() as JsonObject) : null;
+    if (!this.isAdminValue(profileData?.['isAdmin'])) {
       throw new Error('Admin privileges required.');
     }
 
@@ -207,5 +209,15 @@ export class ContentImportService {
       return value;
     }
     return undefined;
+  }
+
+  private isAdminValue(value: unknown): boolean {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'string') {
+      return value.toLowerCase() === 'true';
+    }
+    return false;
   }
 }
