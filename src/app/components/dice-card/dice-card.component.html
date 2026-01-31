@@ -5,10 +5,15 @@
     <mat-card-content>
         <div class="dice-container">
 
-            @if (gameState.pendingRoll(); as pending) {
+            @if (diceTray.pendingRoll(); as pending) {
                 <div class="pending-roll-info">
-                   <p>{{ pending.reason }}</p>
-                   <p class="modifier">Modifier: {{ pending.modifier >= 0 ? '+' : '' }}{{ pending.modifier }}</p>
+                   <p>{{ pending.label }}</p>
+                   <p class="modifier">
+                     Roll {{ pending.expression }}
+                     @if (pending.modifier !== undefined) {
+                       <span>(Modifier: {{ pending.modifier >= 0 ? '+' : '' }}{{ pending.modifier }})</span>
+                     }
+                   </p>
                 </div>
 
                 @if (rolling()) {
@@ -22,7 +27,7 @@
                     </div>
                 } @else {
                      <button mat-fab extended color="accent" (click)="rollDice()">
-                        <span class="d20-icon">🎲</span> Roll D20
+                        <span class="d20-icon">🎲</span> Roll
                      </button>
                 }
 

@@ -5,6 +5,9 @@ import { AdventureNode, AdventureOption, PendingRoll, Monster } from '../models/
 import { GameStateService } from './game-state.service';
 import { CombatEngineService } from './combat-engine.service';
 import { CharacterStats } from '../models/character.model';
+import { DiceTrayBridgeService } from '../core/services/dice-tray-bridge.service';
+import { DiceRollResult } from '../core/models/dice-roll';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 interface AdventureData {
   nodes: AdventureNode[];
@@ -18,6 +21,7 @@ export class AdventureEngineService {
   private http = inject(HttpClient);
   private gameState = inject(GameStateService);
   private combatEngine = inject(CombatEngineService);
+  private diceTray = inject(DiceTrayBridgeService);
 
   private nodes = new Map<string, AdventureNode>();
   private monsters = new Map<string, Monster>();
@@ -27,6 +31,7 @@ export class AdventureEngineService {
   readonly currentDisplayNode = signal<AdventureNode | null>(null);
   readonly isLoading = signal<boolean>(true);
   // readonly pendingRoll is now in GameStateService
+  private pendingSkillCheck: PendingSkillCheck | null = null;
 
   async loadAdventure(url: string) {
     this.isLoading.set(true);
@@ -57,6 +62,12 @@ export class AdventureEngineService {
 
   getMonster(id: string): Monster | undefined {
     return this.monsters.get(id);
+  }
+
+  constructor() {
+    this.diceTray.rollResults$
+      .pipe(takeUntilDestroyed())
+      .subscribe(result => this.handleDiceResult(result));
   }
 
   // Called whenever we want to refresh what the user sees based on state
@@ -209,55 +220,93 @@ export class AdventureEngineService {
         }
     }
     
+    const requestId = this.createRollId();
+    this.pendingSkillCheck = {
+      id: requestId,
+      reason: `${option.skill} Check`,
+      modifier,
+      dc: option.dc,
+      sourceOption: option
+    };
+
     this.gameState.addLog({
       type: 'info',
       message: `Make a ${option.skill} check (DC ${option.dc}).`,
       timestamp: Date.now()
     });
 
-    this.gameState.pendingRoll.set({
-      reason: `${option.skill} Check`,
+    this.diceTray.requestRoll({
+      id: requestId,
+      label: `${option.skill} Check`,
+      expression: '1d20',
       modifier,
-      dc: option.dc,
-      sourceOption: option
+      context: {
+        kind: 'skill_check'
+      }
     });
   }
 
   resolvePendingRoll(roll: number) {
-    const pending = this.gameState.pendingRoll();
+    const pending = this.pendingSkillCheck;
+    if (!pending) return;
+    this.handleSkillCheckResult({
+      id: pending.id,
+      total: roll + pending.modifier,
+      rolls: [roll],
+      natural: roll
+    });
+  }
+
+  private handleDiceResult(result: DiceRollResult): void {
+    const pending = this.pendingSkillCheck;
+    if (!pending || result.id !== pending.id) {
+      return;
+    }
+    this.handleSkillCheckResult(result);
+  }
+
+  private handleSkillCheckResult(result: DiceRollResult): void {
+    const pending = this.pendingSkillCheck;
     if (!pending) return;
 
-    const total = roll + pending.modifier;
+    const rawRoll = result.rolls[0] ?? result.total - pending.modifier;
+    const total = result.total;
     const option = pending.sourceOption;
 
     this.gameState.addLog({
       type: 'roll',
-      message: `Rolled ${roll} + ${pending.modifier} = ${total} (DC ${pending.dc})`,
+      message: `Rolled ${rawRoll} + ${pending.modifier} = ${total} (DC ${pending.dc})`,
       timestamp: Date.now()
     });
 
     if (pending.onComplete) {
-        pending.onComplete(roll);
-        this.gameState.pendingRoll.set(null);
-        return;
+      pending.onComplete(rawRoll);
+      this.pendingSkillCheck = null;
+      return;
     }
 
     if (option) {
-        if (pending.dc && total >= pending.dc) {
+      if (pending.dc && total >= pending.dc) {
         this.gameState.addLog({ type: 'info', message: 'Success!', timestamp: Date.now() });
         if (option.successNode) {
-            this.gameState.setNode(option.successNode);
-            this.updateCurrentNode();
+          this.gameState.setNode(option.successNode);
+          this.updateCurrentNode();
         }
-        } else {
+      } else {
         this.gameState.addLog({ type: 'info', message: 'Failure!', timestamp: Date.now() });
         if (option.failNode) {
-            this.gameState.setNode(option.failNode);
-            this.updateCurrentNode();
+          this.gameState.setNode(option.failNode);
+          this.updateCurrentNode();
         }
-        }
+      }
     }
 
-    this.gameState.pendingRoll.set(null);
+    this.pendingSkillCheck = null;
+  }
+
+  private createRollId(): string {
+    return `roll_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
   }
 }
+
+type PendingSkillCheck = PendingRoll & { id: string };

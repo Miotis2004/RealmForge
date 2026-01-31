@@ -44,6 +44,11 @@
                 @if (currentCombatant(combat); as active) {
                   <div class="turn-details">
                     <h4>Current Turn: {{ active.name }}</h4>
+                    @if (combat.awaitingPlayer && combat.pendingRoll) {
+                      <p class="awaiting-roll">
+                        Waiting for your roll in the Dice Tray: {{ combat.pendingRoll.label }}
+                      </p>
+                    }
                     @if (active.unconscious) {
                       <p>Hero is unconscious.</p>
                       @if (active.deathSaves) {
@@ -54,14 +59,14 @@
                       }
                     }
                     @if (active.side === 'monster') {
-                      <p>Enemy is acting...</p>
+                      <p>Enemy turn.</p>
                     }
                   </div>
                 }
 
                 <div class="combat-actions">
                   @if (isHeroTurn(combat)) {
-                    @if (!combat.order[combat.turnIndex].unconscious) {
+                    @if (!combat.order[combat.turnIndex].unconscious && !combat.awaitingPlayer) {
                       <div class="action-buttons">
                         @for (enemy of combat.order; track enemy.id) {
                           @if (enemy.side === 'monster' && enemy.alive) {

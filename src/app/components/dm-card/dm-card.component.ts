@@ -219,12 +219,15 @@ export class DmCardComponent {
     if (!current || current.side !== 'monster' || !current.alive) {
       return;
     }
+    if (combat.awaitingPlayer) {
+      return;
+    }
     const key = `${combat.round}-${combat.turnIndex}-${current.id}`;
     if (this.lastAutoTurnKey === key) {
       return;
     }
     this.lastAutoTurnKey = key;
-    setTimeout(() => this.combatService.monsterAutoTurn(), 0);
+    setTimeout(() => this.combatService.processCurrentTurnIfNeeded(), 0);
   }
 }
 
