@@ -4,6 +4,7 @@ import { CharacterCardComponent } from './components/character-card/character-ca
 import { LogCardComponent } from './components/log-card/log-card.component';
 import { DiceCardComponent } from './components/dice-card/dice-card.component';
 import { OracleCardComponent } from './components/oracle-card/oracle-card.component';
+import { MainMenuDialogComponent } from './components/main-menu-dialog/main-menu-dialog.component';
 import { AdventureEngineService } from './services/adventure-engine.service';
 import { PersistenceService } from './services/persistence.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,7 +13,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { MainMenuDialogComponent } from './components/main-menu-dialog/main-menu-dialog.component';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 
 @Component({
@@ -25,7 +25,6 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
     LogCardComponent, 
     DiceCardComponent,
     OracleCardComponent,
-    MainMenuDialogComponent,
     MatButtonModule,
     MatToolbarModule,
     MatIconModule,

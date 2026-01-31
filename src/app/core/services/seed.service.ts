@@ -31,6 +31,12 @@ type SeedState = {
   fileStates?: Record<string, { hash?: string }>;
 };
 
+type SeedWrite = {
+  ref: DocumentReference;
+  data: Record<string, unknown>;
+  options?: SetOptions;
+};
+
 @Injectable({
   providedIn: 'root'
 })
@@ -151,15 +157,20 @@ export class SeedService {
       throw new Error('Bestiary JSON should be an array of monsters');
     }
 
-    const operations: Array<{ ref: DocumentReference; data: unknown; options?: SetOptions }> = [];
+    const operations: SeedWrite[] = [];
 
     for (const monster of json) {
-      if (!monster || typeof monster !== 'object' || !('id' in monster)) {
+      if (!this.isRecord(monster)) {
         console.warn('[SeedService] Skipping monster with missing id', monster);
         continue;
       }
 
-      const monsterId = String((monster as { id: string }).id);
+      const monsterId = this.getString(monster, 'id');
+      if (!monsterId) {
+        console.warn('[SeedService] Skipping monster with missing id', monster);
+        continue;
+      }
+
       const docRef = doc(this.firestore, 'monsters', monsterId);
       operations.push({ ref: docRef, data: monster, options: { merge: true } });
     }
@@ -168,40 +179,48 @@ export class SeedService {
   }
 
   private async seedAdventure(json: unknown): Promise<number> {
-    if (!json || typeof json !== 'object') {
+    if (!this.isRecord(json)) {
       throw new Error('Adventure JSON should be an object');
     }
 
-    const adventureData = json as Record<string, unknown>;
-    const adventureId = this.getAdventureId(adventureData);
-    const operations: Array<{ ref: DocumentReference; data: unknown; options?: SetOptions }> = [];
+    const adventureData = json;
+    const adventureId = this.computeAdventureId(adventureData, 'tutorial-dungeon');
+    const operations: SeedWrite[] = [];
+
+    const title = this.getString(adventureData, 'title') ?? this.getString(adventureData, 'name') ?? adventureId;
+    const name = this.getString(adventureData, 'name') ?? this.getString(adventureData, 'title') ?? adventureId;
+    const version = this.getNumber(adventureData, 'version') ?? 1;
+    const published = this.getBoolean(adventureData, 'published') ?? true;
 
     const adventureDoc: Record<string, unknown> = {
-      title: adventureData.title ?? adventureData.name ?? adventureId,
-      name: adventureData.name ?? adventureData.title ?? adventureId,
-      version: adventureData.version ?? 1,
-      published: adventureData.published ?? true
+      title,
+      name,
+      version,
+      published
     };
 
-    if (adventureData.description) {
-      adventureDoc.description = adventureData.description;
+    const description = this.getString(adventureData, 'description');
+    if (description) {
+      adventureDoc['description'] = description;
     }
 
-    if (adventureData.startNodeId) {
-      adventureDoc.startNodeId = adventureData.startNodeId;
+    const startNodeId = this.getString(adventureData, 'startNodeId');
+    if (startNodeId) {
+      adventureDoc['startNodeId'] = startNodeId;
     }
 
     const adventureRef = doc(this.firestore, 'adventures', adventureId);
     operations.push({ ref: adventureRef, data: adventureDoc, options: { merge: true } });
 
-    const nodes = Array.isArray(adventureData.nodes) ? adventureData.nodes : [];
+    const nodesRaw = this.getArray(adventureData, 'nodes') ?? [];
+    const nodes = nodesRaw.filter((node) => this.isRecord(node));
     for (const node of nodes) {
-      if (!node || typeof node !== 'object' || !('nodeId' in node)) {
+      const nodeId = this.getString(node, 'nodeId');
+      if (!nodeId) {
         console.warn('[SeedService] Skipping node with missing nodeId', node);
         continue;
       }
 
-      const nodeId = String((node as { nodeId: string }).nodeId);
       const nodeRef = doc(this.firestore, 'adventures', adventureId, 'nodes', nodeId);
       operations.push({ ref: nodeRef, data: node, options: { merge: true } });
     }
@@ -210,7 +229,7 @@ export class SeedService {
   }
 
   private async commitBatches(
-    operations: Array<{ ref: DocumentReference; data: unknown; options?: SetOptions }>,
+    operations: SeedWrite[],
     firestore: Firestore
   ): Promise<number> {
     let batch = writeBatch(firestore);
@@ -237,22 +256,21 @@ export class SeedService {
     return totalWrites;
   }
 
-  private getAdventureId(adventureData: Record<string, unknown>): string {
-    if (typeof adventureData.adventureId === 'string' && adventureData.adventureId.trim()) {
-      return adventureData.adventureId;
+  private computeAdventureId(adventureData: Record<string, unknown>, fallback: string): string {
+    const adventureId = this.getString(adventureData, 'adventureId');
+    if (adventureId) {
+      return adventureId;
     }
 
-    if (typeof adventureData.id === 'string' && adventureData.id.trim()) {
-      return adventureData.id;
+    const id = this.getString(adventureData, 'id');
+    if (id) {
+      return id;
     }
 
-    const rawTitle =
-      (typeof adventureData.title === 'string' && adventureData.title) ||
-      (typeof adventureData.name === 'string' && adventureData.name) ||
-      '';
+    const rawTitle = this.getString(adventureData, 'title') ?? this.getString(adventureData, 'name') ?? '';
 
     const slug = this.slugify(rawTitle);
-    return slug || 'tutorial-dungeon';
+    return slug || fallback;
   }
 
   private slugify(value: string): string {
@@ -268,6 +286,42 @@ export class SeedService {
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+  }
+
+  private getString(obj: Record<string, unknown>, key: string): string | undefined {
+    const value = obj[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value;
+    }
+    return undefined;
+  }
+
+  private getBoolean(obj: Record<string, unknown>, key: string): boolean | undefined {
+    const value = obj[key];
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    return undefined;
+  }
+
+  private getNumber(obj: Record<string, unknown>, key: string): number | undefined {
+    const value = obj[key];
+    if (typeof value === 'number' && !Number.isNaN(value)) {
+      return value;
+    }
+    return undefined;
+  }
+
+  private getArray(obj: Record<string, unknown>, key: string): unknown[] | undefined {
+    const value = obj[key];
+    if (Array.isArray(value)) {
+      return value;
+    }
+    return undefined;
   }
 
   private showSnack(message: string): void {
