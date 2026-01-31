@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -17,6 +17,14 @@ export class DiceCardComponent {
   gameState = inject(GameStateService);
   rolling = signal(false);
   lastRoll = signal<number | null>(null);
+
+  constructor() {
+    effect(() => {
+      if (!this.gameState.pendingRoll()) {
+        this.lastRoll.set(null);
+      }
+    });
+  }
 
   async rollDice() {
     if (this.rolling()) return;
