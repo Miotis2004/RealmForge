@@ -11,8 +11,6 @@ import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatIconModule } from '@angular/material/icon';
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
 import { CommonModule } from '@angular/common';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MainMenuDialogComponent } from './components/main-menu-dialog/main-menu-dialog.component';
 
 @Component({
   selector: 'app-root',
@@ -27,8 +25,7 @@ import { MainMenuDialogComponent } from './components/main-menu-dialog/main-menu
     MatButtonModule,
     MatToolbarModule,
     MatIconModule,
-    DragDropModule,
-    MatDialogModule
+    DragDropModule
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
@@ -37,7 +34,6 @@ export class AppComponent implements OnInit {
   title = 'realm-forge';
   adventure = inject(AdventureEngineService);
   persistence = inject(PersistenceService);
-  dialog = inject(MatDialog);
 
   // Define columns as a public property for the template
   columns: {id: string, items: string[]}[] = [
