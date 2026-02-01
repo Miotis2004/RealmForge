@@ -7,8 +7,7 @@ import { GameSessionService } from './game-session.service';
 import { GameStateService } from '../../services/game-state.service';
 import { abilityMod, proficiencyBonus, rollDie } from '../dnd/dice';
 import { resolveAttack } from '../dnd/combat-rules';
-import { DiceTrayBridgeService } from './dice-tray-bridge.service';
-import { DiceRollResult } from '../models/dice-roll';
+import { RollBusService, RollKind, RollResult } from './roll-bus.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Injectable({
@@ -18,10 +17,11 @@ export class CombatService {
   private monsterRepository = inject(MonsterRepository);
   private gameSession = inject(GameSessionService);
   private gameState = inject(GameStateService);
-  private diceTray = inject(DiceTrayBridgeService);
+  private rollBus = inject(RollBusService);
   private rng: () => number = Math.random;
   private stateSignal = signal<CombatState | null>(null);
   private isProcessingTurn = false;
+  private rollTimeouts = new Map<string, number>();
 
   readonly state = this.stateSignal.asReadonly();
 
@@ -30,9 +30,9 @@ export class CombatService {
   }
 
   constructor() {
-    this.diceTray.rollResults$
+    this.rollBus.results$
       .pipe(takeUntilDestroyed())
-      .subscribe(result => this.handleDiceTrayResult(result));
+      .subscribe(result => this.onRollResult(result));
   }
 
   async startCombat(adventureId: string, node: AdventureNode, heroSnapshot: HeroSnapshot): Promise<void> {
@@ -89,7 +89,7 @@ export class CombatService {
     this.requestRoll(pendingRoll, {
       combatId: node.nodeId,
       actorId: hero.id,
-      kind: 'initiative'
+      source: 'combat'
     });
   }
 
@@ -128,7 +128,7 @@ export class CombatService {
       combatId: state.nodeId,
       actorId: current.id,
       targetId: target.id,
-      kind: 'hero_attack'
+      source: 'combat'
     });
   }
 
@@ -209,6 +209,9 @@ export class CombatService {
     const state = this.stateSignal();
     if (!state) return;
 
+    if (state.pendingRoll) {
+      this.clearRollTimeout(state.pendingRoll.id);
+    }
     const nextState = { ...state, active: false, pendingRoll: undefined, awaitingPlayer: false };
     this.stateSignal.set(nextState);
     const targetNodeId = outcome === 'victory' ? state.victoryNodeId : state.defeatNodeId;
@@ -218,6 +221,10 @@ export class CombatService {
   }
 
   clearCombat(): void {
+    const state = this.stateSignal();
+    if (state?.pendingRoll) {
+      this.clearRollTimeout(state.pendingRoll.id);
+    }
     this.stateSignal.set(null);
     this.isProcessingTurn = false;
   }
@@ -272,7 +279,7 @@ export class CombatService {
     this.requestRoll(pendingRoll, {
       combatId: state.nodeId,
       actorId: hero.id,
-      kind: 'death_save'
+      source: 'combat'
     });
   }
 
@@ -406,10 +413,13 @@ export class CombatService {
     return typeof value === 'object' && value !== null;
   }
 
-  private handleDiceTrayResult(result: DiceRollResult): void {
+  private onRollResult(result: RollResult): void {
     const state = this.stateSignal();
     if (!state?.active || !state.pendingRoll) return;
     if (result.id !== state.pendingRoll.id) return;
+
+    console.log('[Combat] Got roll result', result);
+    this.clearRollTimeout(result.id);
 
     switch (state.pendingRoll.kind) {
       case 'hero_initiative':
@@ -429,7 +439,7 @@ export class CombatService {
     }
   }
 
-  private handleHeroInitiativeResult(state: CombatState, result: DiceRollResult): void {
+  private handleHeroInitiativeResult(state: CombatState, result: RollResult): void {
     const heroIndex = state.order.findIndex((combatant) => combatant.id === 'hero');
     if (heroIndex === -1) return;
     const hero = state.order[heroIndex];
@@ -450,7 +460,7 @@ export class CombatService {
     this.beginTurn(nextState);
   }
 
-  private handleHeroAttackResult(state: CombatState, result: DiceRollResult): void {
+  private handleHeroAttackResult(state: CombatState, result: RollResult): void {
     const hero = state.order.find((combatant) => combatant.id === 'hero');
     const pending = state.pendingRoll;
     if (!hero || !pending || !pending.targetId) return;
@@ -502,11 +512,11 @@ export class CombatService {
       combatId: state.nodeId,
       actorId: hero.id,
       targetId: target.id,
-      kind: 'hero_damage'
+      source: 'combat'
     });
   }
 
-  private handleHeroDamageResult(state: CombatState, result: DiceRollResult): void {
+  private handleHeroDamageResult(state: CombatState, result: RollResult): void {
     const pending = state.pendingRoll;
     if (!pending?.targetId) return;
     const targetIndex = state.order.findIndex((combatant) => combatant.id === pending.targetId);
@@ -551,7 +561,7 @@ export class CombatService {
     void this.bufferAdvanceTurn();
   }
 
-  private handleDeathSaveResult(state: CombatState, result: DiceRollResult): void {
+  private handleDeathSaveResult(state: CombatState, result: RollResult): void {
     const heroIndex = state.order.findIndex((combatant) => combatant.id === 'hero');
     if (heroIndex === -1) return;
     const hero = state.order[heroIndex];
@@ -627,16 +637,24 @@ export class CombatService {
   }
 
   private requestRoll(pending: CombatPendingRoll, context: DiceRollRequestContext): void {
-    this.diceTray.requestRoll({
+    const requestKind = this.mapRollKind(pending.kind);
+    const request = {
       id: pending.id,
+      kind: requestKind,
       label: pending.label,
       expression: pending.expression,
       modifier: pending.modifier,
       context: {
-        ...context,
-        kind: pending.kind
-      }
-    });
+        actor: context.actorId,
+        target: context.targetId,
+        source: context.source
+      },
+      createdAt: pending.createdAt
+    };
+
+    console.log('[Combat] Request roll', request);
+    this.rollBus.requestRoll(request);
+    this.scheduleRollTimeout(pending);
   }
 
   private clearPendingAndResume(state: CombatState): void {
@@ -669,7 +687,7 @@ export class CombatService {
   }
 
   private createRollId(): string {
-    return `roll_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+    return globalThis.crypto?.randomUUID?.() ?? `roll_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
   }
 
   private async bufferAdvanceTurn(): Promise<void> {
@@ -682,11 +700,52 @@ export class CombatService {
   private async sleep(ms: number): Promise<void> {
     await new Promise(resolve => setTimeout(resolve, ms));
   }
+
+  private mapRollKind(kind: CombatPendingRoll['kind']): RollKind {
+    switch (kind) {
+      case 'hero_initiative':
+        return 'initiative';
+      case 'hero_attack':
+        return 'attack';
+      case 'hero_damage':
+        return 'damage';
+      case 'death_save':
+        return 'death_save';
+      default:
+        return 'generic';
+    }
+  }
+
+  private scheduleRollTimeout(pending: CombatPendingRoll): void {
+    this.clearRollTimeout(pending.id);
+    const timeoutId = window.setTimeout(() => {
+      const state = this.stateSignal();
+      if (!state?.active || state.pendingRoll?.id !== pending.id) {
+        return;
+      }
+      console.error('[Combat] Roll request timed out', pending);
+      this.stateSignal.set({
+        ...state,
+        pendingRoll: undefined,
+        awaitingPlayer: false,
+        log: this.appendLog(state.log, 'Roll timed out. Please try again.')
+      });
+    }, 60000);
+    this.rollTimeouts.set(pending.id, timeoutId);
+  }
+
+  private clearRollTimeout(id: string): void {
+    const timeoutId = this.rollTimeouts.get(id);
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+      this.rollTimeouts.delete(id);
+    }
+  }
 }
 
 type DiceRollRequestContext = {
   combatId?: string;
   actorId?: string;
   targetId?: string;
-  kind?: string;
+  source?: string;
 };

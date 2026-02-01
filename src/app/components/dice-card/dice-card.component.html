@@ -5,7 +5,7 @@
     <mat-card-content>
         <div class="dice-container">
 
-            @if (diceTray.pendingRoll(); as pending) {
+            @if (currentRequest(); as pending) {
                 <div class="pending-roll-info">
                    <p>{{ pending.label }}</p>
                    <p class="modifier">

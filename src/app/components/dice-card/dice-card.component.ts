@@ -1,10 +1,10 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { DiceTrayBridgeService } from '../../core/services/dice-tray-bridge.service';
 import { rollDice } from '../../core/dnd/dice';
-import { DiceRollResult } from '../../core/models/dice-roll';
+import { RollBusService, RollRequest, RollResult } from '../../core/services/roll-bus.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-dice-card',
@@ -14,21 +14,23 @@ import { DiceRollResult } from '../../core/models/dice-roll';
   styleUrl: './dice-card.component.scss'
 })
 export class DiceCardComponent {
-  diceTray = inject(DiceTrayBridgeService);
+  rollBus = inject(RollBusService);
+  currentRequest = signal<RollRequest | null>(null);
   rolling = signal(false);
   lastRoll = signal<number | null>(null);
 
   constructor() {
-    effect(() => {
-      if (!this.diceTray.pendingRoll()) {
+    this.rollBus.requests$
+      .pipe(takeUntilDestroyed())
+      .subscribe(request => {
+        this.currentRequest.set(request);
         this.lastRoll.set(null);
-      }
-    });
+      });
   }
 
   async rollDice() {
     if (this.rolling()) return;
-    const pending = this.diceTray.pendingRoll();
+    const pending = this.currentRequest();
     if (!pending) return;
 
     this.rolling.set(true);
@@ -46,17 +48,27 @@ export class DiceCardComponent {
     // Or instant. Instant is fine for now, but maybe 500ms delay.
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    this.diceTray.resolveRoll(this.buildResult(pending.id, pending.expression, result));
+    this.rollBus.publishResult(this.buildResult(pending, result));
+    window.setTimeout(() => {
+      if (this.currentRequest()?.id === pending.id) {
+        this.currentRequest.set(null);
+        this.lastRoll.set(null);
+      }
+    }, 250);
   }
 
-  private buildResult(id: string, expression: string, result: ReturnType<typeof rollDice>): DiceRollResult {
-    const normalized = expression.replace(/\s+/g, '').toLowerCase();
+  private buildResult(request: RollRequest, result: ReturnType<typeof rollDice>): RollResult {
+    const normalized = request.expression.replace(/\s+/g, '').toLowerCase();
     const natural = this.isSingleD20(normalized) ? result.rolls[0] : undefined;
     return {
-      id,
+      id: request.id,
       total: result.total,
       rolls: result.rolls,
-      natural
+      modifier: result.modifier,
+      expression: request.expression,
+      label: request.label,
+      natural,
+      createdAt: Date.now()
     };
   }
 

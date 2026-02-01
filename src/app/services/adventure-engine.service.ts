@@ -5,8 +5,7 @@ import { AdventureNode, AdventureOption, PendingRoll, Monster } from '../models/
 import { GameStateService } from './game-state.service';
 import { CombatEngineService } from './combat-engine.service';
 import { CharacterStats } from '../models/character.model';
-import { DiceTrayBridgeService } from '../core/services/dice-tray-bridge.service';
-import { DiceRollResult } from '../core/models/dice-roll';
+import { RollBusService, RollResult } from '../core/services/roll-bus.service';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 interface AdventureData {
@@ -21,7 +20,7 @@ export class AdventureEngineService {
   private http = inject(HttpClient);
   private gameState = inject(GameStateService);
   private combatEngine = inject(CombatEngineService);
-  private diceTray = inject(DiceTrayBridgeService);
+  private rollBus = inject(RollBusService);
 
   private nodes = new Map<string, AdventureNode>();
   private monsters = new Map<string, Monster>();
@@ -65,7 +64,7 @@ export class AdventureEngineService {
   }
 
   constructor() {
-    this.diceTray.rollResults$
+    this.rollBus.results$
       .pipe(takeUntilDestroyed())
       .subscribe(result => this.handleDiceResult(result));
   }
@@ -235,14 +234,16 @@ export class AdventureEngineService {
       timestamp: Date.now()
     });
 
-    this.diceTray.requestRoll({
+    this.rollBus.requestRoll({
       id: requestId,
+      kind: 'generic',
       label: `${option.skill} Check`,
       expression: '1d20',
       modifier,
       context: {
-        kind: 'skill_check'
-      }
+        source: 'adventure'
+      },
+      createdAt: Date.now()
     });
   }
 
@@ -253,11 +254,15 @@ export class AdventureEngineService {
       id: pending.id,
       total: roll + pending.modifier,
       rolls: [roll],
-      natural: roll
+      modifier: pending.modifier,
+      expression: '1d20',
+      label: pending.reason,
+      natural: roll,
+      createdAt: Date.now()
     });
   }
 
-  private handleDiceResult(result: DiceRollResult): void {
+  private handleDiceResult(result: RollResult): void {
     const pending = this.pendingSkillCheck;
     if (!pending || result.id !== pending.id) {
       return;
@@ -265,7 +270,7 @@ export class AdventureEngineService {
     this.handleSkillCheckResult(result);
   }
 
-  private handleSkillCheckResult(result: DiceRollResult): void {
+  private handleSkillCheckResult(result: RollResult): void {
     const pending = this.pendingSkillCheck;
     if (!pending) return;
 
